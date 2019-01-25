@@ -1,0 +1,18 @@
+<h2>{{ activePlayer | uppercase }}'S PICK</h2>
+
+<div class="draft-pool" ng-repeat="section in displayCube">
+  <li ng-repeat="card in section">
+    <div ng-click="selectCard(card)" class="card" ng-class="{ 'drafted' : card.isDrafted }">
+      <img src="http://gatherer.wizards.com/Handlers/Image.ashx?name={{ card.name }}&amp;set=&amp;type=card">
+    </div>
+  </li>
+</div>
+
+<div id="card-dialog" class="modal">
+  <div class="modal-content">
+    <span class="close" ng-click="cancelCardSelection()">&times;</span>
+    <p>Are you sure you want to pick {{ card.name }}?</p>
+    <img class="modal-image" src="http://gatherer.wizards.com/Handlers/Image.ashx?name={{ card.name }}&amp;set=&amp;type=card">
+    <button class="confirm-button" ng-click="pickCard(card)">CONFIRM</button>
+  </div>
+</div>

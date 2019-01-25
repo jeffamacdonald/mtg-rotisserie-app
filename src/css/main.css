@@ -1,0 +1,64 @@
+body {
+  margin: 0;
+  background: #1a2f2a;
+  padding: 0 32px 32px 32px;
+  font-family: "Lucida Console", monospace;
+  color: white;
+}
+h1 {
+  text-align: center;
+  margin: 0;
+  padding: 1em 0 0.75em;
+  font-size: 1.25em;
+}
+h2 {
+  text-align: center;
+  margin: 0;
+  padding: 1em 0 0.75em;
+  font-size: 1em;
+}
+ul {
+  margin: -3px;
+  padding: 0;
+  list-style: none;
+}
+li {
+  float: left;
+  margin: 3px;
+  list-style-type: none;
+}
+img {
+  display: block;
+  width: 92px;
+  height: 128px;
+  border-radius: 4px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.4);
+}
+
+/* Add a black background color to the top navigation */
+.topnav {
+  background-color: #1a2f2a;
+  overflow: hidden;
+}
+
+/* Style the links inside the navigation bar */
+.topnav a {
+  float: left;
+  color: #f2f2f2;
+  text-align: center;
+  padding: 14px 16px;
+  text-decoration: none;
+  font-size: 17px;
+}
+
+/* Change the color of links on hover */
+.topnav a:hover {
+  background-color: #ddd;
+  color: black;
+}
+
+/* Add a color to the active/current link */
+.topnav a.active {
+  background-color: #4CAF50;
+  color: white;
+}

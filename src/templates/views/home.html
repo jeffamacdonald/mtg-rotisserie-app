@@ -1,0 +1,25 @@
+<h2>Current Draft Settings</h2>
+<table>
+  <tr>
+    <th ng-repeat="name in playerArray">{{ name }}</th>
+  </tr>
+</table>
+<button ng-click="draftSettingsModal()">New Draft</button>
+
+
+
+<div id="draft-settings-dialog" class="modal">
+  <div class="modal-content">
+    <span class="close" ng-click="cancelModal()">&times;</span>
+    <h2>New Draft Settings</h2>
+    <p>Players</p>
+    <div class="player-select">
+      <div ng-repeat="player in players">
+        <input type="checkbox" ng-model="player.isChecked"> {{ player.name }}
+      </div>
+    </div>
+    <p>Number of Rounds</p>
+    <div><input type="text" ng-model="numberOfRounds"></div>
+    <button class="confirm-button" ng-click="startNewDraft()">START NEW DRAFT</button>
+  </div>
+</div>

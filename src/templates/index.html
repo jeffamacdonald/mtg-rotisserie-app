@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="rotoDraftApp">
+	<head>
+		<title>Rotisserie Draft</title>
+		<link href="css/main.css" rel="stylesheet">
+	</head>
+	<body>
+    <div class="topnav">
+      <a class="active" href="/#!/home/">Home</a>
+      <a href="/#!/draft-pool/">Draft Pool</a>
+      <a href="/#!/draft-picks/">Draft Picks</a>
+      <a href="/#!/player-pools/">Player Pools</a>
+    </div>
+    <h1>Rotisserie Draft App</h1>
+		<ng-view class="view"></ng-view>
+	</body>
+
+	<script src="js/scripts.js"></script>
+	<script src="https://www.gstatic.com/firebasejs/5.7.2/firebase.js"></script>
+	<!-- AngularFire -->
+	<script src="https://cdn.firebase.com/libs/angularfire/2.3.0/angularfire.min.js"></script>
+	<script>
+	  // Initialize Firebase
+	  var config = {
+	    apiKey: "AIzaSyAjeOH7sjWhLP_d9F1zsT21Oa7PZzdpEro",
+	    authDomain: "roto-draft-app.firebaseapp.com",
+	    databaseURL: "https://roto-draft-app.firebaseio.com",
+	    projectId: "roto-draft-app",
+	    storageBucket: "roto-draft-app.appspot.com",
+	    messagingSenderId: "259615753025"
+	  };
+	  firebase.initializeApp(config);
+	</script>
+</html>
