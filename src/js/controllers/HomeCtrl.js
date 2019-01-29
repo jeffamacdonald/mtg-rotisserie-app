@@ -71,6 +71,33 @@ function HomeCtrl($scope,$firebaseArray,$firebaseObject,activeDraftService) {
     });
   };
 
+  $scope.textColor = function(card) {
+    if(card.colors == undefined && card.type == undefined) {
+      return;
+    } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.names != undefined && card.colorIdentity[1] == 'W') || 
+      (card.colors != undefined && card.colorIdentity[0] == 'W' && card.colorIdentity.length == 1)) {
+      return {background:'white',color:'black'};
+    } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.names != undefined && card.colorIdentity[1] == 'U') || 
+      (card.colors != undefined && card.colorIdentity[0] == 'U' && card.colorIdentity.length == 1)) {
+      return {background:'blue'};
+    } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.names != undefined && card.colorIdentity[1] == 'B') || 
+      (card.colors != undefined && card.colorIdentity[0] == 'B' && card.colorIdentity.length == 1)) {
+      return {background:'black'};
+    } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.names != undefined && card.colorIdentity[1] == 'R') || 
+      (card.colors != undefined && card.colorIdentity[0] == 'R' && card.colorIdentity.length == 1)) {
+      return {background:'#cc0000'};
+    } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.names != undefined && card.colorIdentity[1] == 'G') || 
+      (card.colors != undefined && card.colorIdentity[0] == 'G' && card.colorIdentity.length == 1)) {
+      return {background:'green'};
+    } else if(card.colors != undefined && card.names == undefined && card.colorIdentity.length == 2) {
+      return {background:'#f9d006',color:'black'};
+    } else if(card.colors == undefined && (card.type == 'Land' || card.type == 'Land — Urza’s')) {
+      return {background:'#ac7339'};
+    } else {
+      return {background:'grey'};
+    }
+  }
+
   $scope.draftPicks = activeDraftService.getDraftArray();
 
   activeDraftService.getAllPlayers().then(function(players) {

@@ -1,3 +1,9 @@
+<div class="topnav">
+  <a class="active" href="/#!/home/">Home</a>
+  <a href="/#!/draft-pool/">Draft Pool</a>
+  <a href="/#!/player-pools/">Player Pools</a>
+</div>
+
 <div>
   <button ng-click="draftSettingsModal()">New Draft</button>
 </div>
@@ -10,7 +16,7 @@
   </tr>
   <tr ng-repeat="roundPicks in draftPicks">
     <td class="round-count">{{ $index + 1 }}</td>
-    <td ng-repeat="pick in roundPicks track by ($index + ':' + row)">{{ pick.name }}</td>
+    <td ng-repeat="pick in roundPicks track by ($index + ':' + row)" ng-style="textColor(pick)">{{ pick.name }}</td>
   </tr>
 </table>
 

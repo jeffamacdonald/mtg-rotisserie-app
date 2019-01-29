@@ -1,4 +1,10 @@
-<h2>{{ activePlayer | uppercase }}'S PICK</h2>
+<div class="topnav">
+  <a href="/#!/home/">Home</a>
+  <a class="active" href="/#!/draft-pool/">Draft Pool</a>
+  <a href="/#!/player-pools/">Player Pools</a>
+</div>
+
+<h1>{{ activePlayer | uppercase }}'S PICK</h1>
 
 <div class="draft-pool" ng-repeat="section in displayCube">
   <li ng-repeat="card in section">

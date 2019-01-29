@@ -5,16 +5,15 @@ angular
 	.service('modalService', modalService);
 
 function modalService() {
-  let cardDialog = document.getElementById('card-dialog');
 
   this.displayModal = function(cardObj) {
     if(!cardObj.isDrafted) {
-      cardDialog.style.display = 'block';
+      document.getElementById('card-dialog').style.display = 'block';
     }
   };
 
   this.closeModal = function() {
-    cardDialog.style.display = 'none';
+    document.getElementById('card-dialog').style.display = 'none';
   };
 };
 })();

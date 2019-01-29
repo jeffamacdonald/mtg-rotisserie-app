@@ -15,6 +15,10 @@ angular.module('rotoDraftApp', [
 			templateUrl: 'views/draft.html',
 			controller: 'DraftCtrl'
 		})
+    .when('/player-pools/', {
+      templateUrl: 'views/pools.html',
+      controller: 'PoolsCtrl'
+    })
 	}
 ]);
 })();

@@ -74,9 +74,13 @@ function activeDraftService($firebaseArray,$firebaseObject) {
         self.getAllPlayers().then(function(players) {
           for(var i=0;i<rounds.$value;i++) {
             players.forEach(function(player) {
-              let card = player.cardPool[Object.keys(player.cardPool)[i]];
-              if(card != undefined) {
-                roundArr.push(card);
+              if(player.cardPool != undefined) {
+                let card = player.cardPool[Object.keys(player.cardPool)[i]];
+                if(card != undefined) {
+                  roundArr.push(card);
+                } else {
+                  roundArr.push({name:''});
+                }
               } else {
                 roundArr.push({name:''});
               }
