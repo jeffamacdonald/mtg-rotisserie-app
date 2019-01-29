@@ -4,37 +4,23 @@ angular
   .module('rotoDraftApp')
   .controller('HomeCtrl', HomeCtrl);
 
-HomeCtrl.$inject = ['$scope','$firebaseArray','$firebaseObject'];
+HomeCtrl.$inject = ['$scope','$firebaseArray','$firebaseObject','activeDraftService'];
 
-function HomeCtrl($scope,$firebaseArray,$firebaseObject) {
+function HomeCtrl($scope,$firebaseArray,$firebaseObject,activeDraftService) {
   const db = firebase.database().ref();
   let settingsModal = document.getElementById('draft-settings-dialog');
 
-  // $scope.tableHeader = [];
-
   let draftProperties = $firebaseArray(db.child('draftProperties'));
-  // draftProperties.$loaded(function(properties) {
-  //   angular.forEach(properties, function(value,key){
-  //     if(value.activeDraft == true) {
-  //       angular.forEach(value.players, function(val,k) {
-  //         let player = $firebaseObject(db.child('players').child(val));
-  //         player.$loaded(function(obj) {
-  //           $scope.tableHeader.push(obj.name);
-  //         })
-  //       })
-  //     }
-  //   })
-  // })
 
   let allPlayers = $firebaseArray(db.child('players'));
   allPlayers.$loaded(function(players) {
     players.forEach(function(player) {
-      player.isChecked = false;
+      player.isChecked = true;
     })
     $scope.players = players;
   });
 
-  $scope.numberOfRounds = 0;
+  $scope.numberOfRounds = 45;
 
   $scope.draftSettingsModal = function() {
     settingsModal.style.display = 'block';
@@ -81,17 +67,15 @@ function HomeCtrl($scope,$firebaseArray,$firebaseObject) {
             }
           });
         });
-        $scope.playerArray = initializePlayerNameArray(draftPlayers);
       });
     });
   };
 
-  function initializePlayerNameArray(players) {
-    var arr = [];
-    players.forEach(function(player) {
-      arr.push(player.name);
-    });
-  };
+  $scope.draftPicks = activeDraftService.getDraftArray();
+
+  activeDraftService.getAllPlayers().then(function(players) {
+    $scope.playerArray = players;
+  });
 
   function initializePickArray(playerCount, totalRounds) {
     var arr = []

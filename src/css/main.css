@@ -5,6 +5,9 @@ body {
   font-family: "Lucida Console", monospace;
   color: white;
 }
+div {
+  text-align: center;
+}
 h1 {
   text-align: center;
   margin: 0;
@@ -35,6 +38,24 @@ img {
   box-shadow: 0 1px 5px rgba(0, 0, 0, 0.4);
 }
 
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
+td, th {
+  border: 1px solid #999;
+  padding: 0.5rem;
+  min-width: 60px;
+  text-align: center;
+}
+
+td {
+  font-size: 0.8em;
+}
+
 /* Add a black background color to the top navigation */
 .topnav {
   background-color: #1a2f2a;
@@ -61,4 +82,9 @@ img {
 .topnav a.active {
   background-color: #4CAF50;
   color: white;
+}
+
+.round-count {
+  min-width: 20px;
+  font-weight: 700;
 }

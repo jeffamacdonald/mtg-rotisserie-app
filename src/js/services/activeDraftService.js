@@ -59,6 +59,37 @@ function activeDraftService($firebaseArray,$firebaseObject) {
     setNextPlayerActive();
   };
 
+  this.getAllPlayers = function() {
+    return getActiveDraftId().then(function(draftId) {
+      return $firebaseArray(db.child('draftProperties').child(draftId).child('players'));
+    });
+  };
+
+  this.getDraftArray = function() {
+    let draftArr = [];
+    let roundArr = [];
+    getActiveDraftId().then(function(draftId) {
+      let totalRounds = $firebaseObject(db.child('draftProperties').child(draftId).child('totalRounds'));
+      totalRounds.$loaded(function(rounds) {
+        self.getAllPlayers().then(function(players) {
+          for(var i=0;i<rounds.$value;i++) {
+            players.forEach(function(player) {
+              let card = player.cardPool[Object.keys(player.cardPool)[i]];
+              if(card != undefined) {
+                roundArr.push(card);
+              } else {
+                roundArr.push({name:''});
+              }
+            });
+            draftArr.push(roundArr);
+            roundArr = [];
+          }
+        });
+      });
+    });
+    return draftArr;
+  };
+
   // get active ids
   this.getActivePlayerId = function() {
     return getActiveDraftId().then(function(draftId) {

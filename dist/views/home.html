@@ -1,12 +1,18 @@
+<div>
+  <button ng-click="draftSettingsModal()">New Draft</button>
+</div>
+
 <h2>Current Draft Settings</h2>
 <table>
   <tr>
-    <th ng-repeat="name in playerArray">{{ name }}</th>
+    <th class="round-count">Rd.</th>
+    <th ng-repeat="player in playerArray">{{ player.name }}</th>
+  </tr>
+  <tr ng-repeat="roundPicks in draftPicks">
+    <td class="round-count">{{ $index + 1 }}</td>
+    <td ng-repeat="pick in roundPicks track by ($index + ':' + row)">{{ pick.name }}</td>
   </tr>
 </table>
-<button ng-click="draftSettingsModal()">New Draft</button>
-
-
 
 <div id="draft-settings-dialog" class="modal">
   <div class="modal-content">
