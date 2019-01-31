@@ -23,7 +23,6 @@ function PoolsCtrl($scope,$firebaseArray,$firebaseObject) {
   };
 
   getAllPlayers().then(function(drafters) {
-    console.log(drafters);
     $scope.drafters = drafters;
   });
 };

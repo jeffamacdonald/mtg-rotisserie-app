@@ -24,6 +24,12 @@
   <div class="modal-content">
     <span class="close" ng-click="cancelModal()">&times;</span>
     <h2>New Draft Settings</h2>
+    <p>Cubes</p>
+    <div class="cube-select">
+      <div ng-repeat="cube in cubes">
+        <input type="checkbox" ng-model="cube.isChecked"> {{ cube.name }}
+      </div>
+    </div>
     <p>Players</p>
     <div class="player-select">
       <div ng-repeat="player in players">

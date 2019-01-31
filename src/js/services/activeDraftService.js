@@ -139,8 +139,9 @@ function activeDraftService($firebaseArray,$firebaseObject) {
     let arr = [];
     pool.forEach(function(card) {
       if(
-        (card.colors != undefined && card.colorIdentity.length == 2 && card.names != undefined && card.colorIdentity[1] == color) || 
-        (card.colors != undefined && card.colorIdentity[0] == color && card.colorIdentity.length == 1)
+        (card.colors != undefined && card.colorIdentity.length == 2 && card.layout == 'transform' && card.colorIdentity[1] == color) || 
+        (card.colors != undefined && card.colorIdentity[0] == color && card.colorIdentity.length == 1) || 
+        (card.text != undefined && card.text.includes('Devoid') && card.colorIdentity.length == 1 && card.colorIdentity[0] == color)
         ) {
         arr.push(card);
       }
@@ -151,7 +152,8 @@ function activeDraftService($firebaseArray,$firebaseObject) {
   function getGoldPoolByColorPair(pool,colorA,colorB) {
     let arr = [];
     pool.forEach(function(card) {
-      if(card.colors != undefined && card.names == undefined && arrayContains(card.colorIdentity,colorA) && arrayContains(card.colorIdentity,colorB) && card.colorIdentity.length == 2) {
+      if(card.colors != undefined && (card.layout == 'normal' || card.layout == 'split') && arrayContains(card.colorIdentity,colorA) && arrayContains(card.colorIdentity,colorB) && card.colorIdentity.length == 2 ||
+        (card.text != undefined && card.text.includes('Devoid') && card.manaCost.includes(colorA) && card.manaCost.includes(colorB))) {
         arr.push(card);
       }
     });
@@ -171,7 +173,7 @@ function activeDraftService($firebaseArray,$firebaseObject) {
   function getColorlessPool(pool) {
     let arr = [];
     pool.forEach(function(card) {
-      if(card.colors == undefined && (card.type != 'Land' && card.type != 'Land — Urza’s')) {
+      if(card.colors == undefined && !arrayContains(card.types,'Land') && !card.text.includes('Devoid')) {
         arr.push(card);
       }
     });
@@ -181,7 +183,7 @@ function activeDraftService($firebaseArray,$firebaseObject) {
   function getLandPool(pool) {
     let arr = [];
     pool.forEach(function(card) {
-      if(card.colors == undefined && (card.type == 'Land' || card.type == 'Land — Urza’s')) {
+      if(card.colors == undefined && arrayContains(card.types,'Land')) {
         arr.push(card);
       }
     });
@@ -203,9 +205,7 @@ function activeDraftService($firebaseArray,$firebaseObject) {
 
   function sortLand(arr) {
     return arr.sort(function(a,b) {
-      a.colorIdentity = a.colorIdentity == undefined ? [] : a.colorIdentity;
-      b.colorIdentity = b.colorIdentity == undefined ? [] : b.colorIdentity;
-      return a.colorIdentity.length - b.colorIdentity.length;
+      return a.multiverseid - b.multiverseid;
     });
   };
 
