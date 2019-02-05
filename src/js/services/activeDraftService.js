@@ -9,7 +9,8 @@ activeDraftService.$inject = ['$firebaseArray','$firebaseObject'];
 function activeDraftService($firebaseArray,$firebaseObject) {
   var self = this;
   const db = firebase.database().ref();
-
+  // let activeDraftId = $firebaseArray(firebase.database().ref().child('draftProperties').orderByChild('activeDraft').equalTo(true));
+// console.log(activeDraftId.$keyAt(0));
   this.getActiveCube = function() {
     return getActiveDraftId().then(function(draftId) {
       let draftPool = $firebaseArray(db.child('draftProperties').child(draftId).child('draftPool'));

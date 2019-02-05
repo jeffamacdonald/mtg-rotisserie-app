@@ -13,7 +13,12 @@ angular.module('rotoDraftApp', [
 		})
 		.when('/draft-pool/', {
 			templateUrl: 'views/draft.html',
-			controller: 'DraftCtrl'
+			controller: 'DraftCtrl',
+			resolve: {
+				'activeDraft': function($firebaseArray) {
+					return $firebaseArray(firebase.database().ref().child('draftProperties').orderByChild('activeDraft').equalTo(true)).$loaded();
+				}
+			}
 		})
     .when('/player-pools/', {
       templateUrl: 'views/pools.html',
