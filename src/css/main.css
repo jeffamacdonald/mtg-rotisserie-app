@@ -56,6 +56,12 @@ td {
   font-size: 0.8em;
 }
 
+button {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
 /* Add a black background color to the top navigation */
 .topnav {
   background-color: #1a2f2a;

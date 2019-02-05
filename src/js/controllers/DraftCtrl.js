@@ -36,5 +36,18 @@ function DraftCtrl($scope,$firebaseArray,$firebaseObject,modalService,activeDraf
     activeDraftService.pickCard(card);
     modalService.closeModal();
   };
+
+  $scope.undoLastPick = function() {
+    activeDraftService.undoPick();
+    document.getElementById('undo-dialog').style.display = 'none';
+  };
+
+  $scope.cancelUndo = function() {
+    document.getElementById('undo-dialog').style.display = 'none';
+  };
+
+  $scope.undoConfirmation = function() {
+    document.getElementById('undo-dialog').style.display = 'block';
+  };
 };
 })();
