@@ -4,11 +4,12 @@ angular
   .module('rotoDraftApp')
   .controller('DraftCtrl', DraftCtrl);
 
-DraftCtrl.$inject = ['$scope','$firebaseArray','$firebaseObject','modalService','activeDraftService'];
+DraftCtrl.$inject = ['$scope','$firebaseArray','$firebaseObject','modalService','activeDraftService','activeDraft'];
 
-function DraftCtrl($scope,$firebaseArray,$firebaseObject,modalService,activeDraftService) {
+function DraftCtrl($scope,$firebaseArray,$firebaseObject,modalService,activeDraftService,activeDraft) {
 	const db = firebase.database().ref();
-  
+  console.log(activeDraft);
+
   activeDraftService.getActiveCube().then(function(cubeSections) {
     $scope.displayCube = cubeSections;
   });
