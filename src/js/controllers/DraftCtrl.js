@@ -36,5 +36,9 @@ function DraftCtrl($scope,$firebaseArray,$firebaseObject,modalService,activeDraf
     activeDraftService.pickCard(card);
     modalService.closeModal();
   };
+
+  $scope.undoLastPick = function() {
+    activeDraftService.undoPick();
+  };
 };
 })();

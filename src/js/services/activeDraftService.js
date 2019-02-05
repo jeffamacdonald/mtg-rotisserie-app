@@ -55,8 +55,13 @@ function activeDraftService($firebaseArray,$firebaseObject) {
 
   this.pickCard = function(card) {
     addCardToActivePlayerPool(card);
-    setCardToIsDrafted(card);
-    setNextPlayerActive();
+    setCardsIsDraftedStatus(card, true);
+    setNextPlayerActive(false);
+  };
+
+  this.undoPick = function() {
+    removeCardFromPreviousPlayerPool();
+    setNextPlayerActive(true);
   };
 
   this.getAllPlayers = function() {
@@ -121,13 +126,25 @@ function activeDraftService($firebaseArray,$firebaseObject) {
     });
   };
 
+  function removeCardFromPreviousPlayerPool() {
+    getActiveDraftId().then(function(draftId) {
+      let previousPlayer = $firebaseObject(db.child('draftProperties').child(draftId).child('previousPlayer'));
+      previousPlayer.$loaded(function(playerId) {
+        let previousPlayerCards = $firebaseArray(db.child('draftProperties').child(draftId).child('players').child(playerId).child('cardPool'));
+        var lastPick = previousPlayerCards[previousPlayerCards.length-1];
+        setCardsIsDraftedStatus(lastPick, false);
+        previousPlayerCards.$remove(lastPick);
+      });
+    });
+  };
+
   function setCardToIsDrafted(card) {
     getActiveDraftId().then(function(draftId) {
       let activeCube = $firebaseArray(db.child('draftProperties').child(draftId).child('draftPool'));
       activeCube.$loaded(function(pool) {
         angular.forEach(pool, function(value,key) {
           if(value.name == card.name) {
-            db.child('draftProperties').child(draftId).child('draftPool').child(value.$id).child('isDrafted').set(true);
+            db.child('draftProperties').child(draftId).child('draftPool').child(value.$id).child('isDrafted').set(bool);
           }
         });
       });
@@ -224,14 +241,28 @@ function activeDraftService($firebaseArray,$firebaseObject) {
     });
   };
 
-  function getSnakeDirection(playerPosition) {
+  function getSnakeDirection(playerPosition, rollbackBool) {
     return getActiveDraftId().then(function(draftId) {
       let activeDraft = $firebaseObject(db.child('draftProperties').child(draftId));
       return activeDraft.$loaded(function(draft) {
-        if(draft.currentRound % 2 == 0 && playerPosition != 1) {
+        if(draft.currentRound % 2 == 0 && playerPosition > 1 && rollbackBool == false) {
           return 'left';
-        } else if(draft.currentRound % 2 != 0 && playerPosition != draft.playerCount) {
+        } else if (draft.currentRound % 2 == 0 && playerPosition < draft.playerCount-1 && rollbackBool) {
+          return 'rollRight';
+        } else if (draft.currentRound % 2 == 0 && playerPosition == draft.playerCount-1 && rollbackBool) {
+          return 'rollToRightEdge';
+        } else if(draft.currentRound % 2 != 0 && playerPosition < draft.playerCount && rollbackBool == false) {
           return 'right';
+        } else if (draft.currentRound % 2 != 0 && playerPosition > 2 && rollbackBool) {
+          return 'rollLeft';
+        } else if (draft.currentRound % 2 != 0 && playerPosition == 2 && rollbackBool) {
+          return 'rollToLeftEdge';
+        } else if (playerPosition == 1 && rollbackBool) {
+          setPreviousRound(draft);
+          return 'rollToPreviousRoundLeft';
+        } else if(playerPosition == draft.playerCount && rollbackBool) {
+          setPreviousRound(draft);
+          return 'rollToPreviousRoundRight';
         } else {
           setNextRound(draft);
         }
@@ -243,26 +274,54 @@ function activeDraftService($firebaseArray,$firebaseObject) {
     db.child('draftProperties').child(draft.$id).child('currentRound').set(draft.currentRound+1);
   };
 
-  function setNextPlayerActive() {
+  function setPreviousRound(draft) {
+    db.child('draftProperties').child(draft.$id).child('currentRound').set(draft.currentRound-1);
+  };
+
+  function setNextPlayerActive(rollbackBool) {
     getActiveDraftId().then(function(draftId) {
       getActivePlayerPosition().then(function(position) {
         let players = $firebaseArray(db.child('draftProperties').child(draftId).child('players'));
         players.$loaded(function(activePlayers) {
-          getSnakeDirection(position).then(function(direction) {
+          getSnakeDirection(position, rollbackBool).then(function(direction) {
+            var newPosition = position;
             switch(direction) {
               case 'right':
+                newPosition++;
+                break;
+              case 'rollRight':
+                newPosition++;
+                position = position + 2;
+                break;
+              case 'rollToRightEdge':
+                newPosition++;
                 position++;
                 break;
-              case 'left':
+              case 'rollToPreviousRoundRight':
                 position--;
+                break;
+              case 'left':
+                newPosition--;
+                break;
+              case 'rollLeft':
+                newPosition--;
+                position = position - 2;
+                break;
+              case 'rollToLeftEdge':
+                newPosition--;
+                position--;
+              case 'rollToPreviousRoundLeft':
+                position++;
                 break;
               default:
                 break;
             }
             angular.forEach(activePlayers, function(value,key) {
-              if(value.draftPosition == position) {
+              if(value.draftPosition == newPosition) {
                 db.child('draftProperties').child(draftId).child('activePlayer').set(value.$id);
-              }
+              } else if(value.draftPosition == position) {
+                db.child('draftProperties').child(draftId).child('previousPlayer').set(value.$id);
+              } 
             });
           });
         });
