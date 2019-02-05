@@ -130,15 +130,17 @@ function activeDraftService($firebaseArray,$firebaseObject) {
     getActiveDraftId().then(function(draftId) {
       let previousPlayer = $firebaseObject(db.child('draftProperties').child(draftId).child('previousPlayer'));
       previousPlayer.$loaded(function(playerId) {
-        let previousPlayerCards = $firebaseArray(db.child('draftProperties').child(draftId).child('players').child(playerId).child('cardPool'));
-        var lastPick = previousPlayerCards[previousPlayerCards.length-1];
-        setCardsIsDraftedStatus(lastPick, false);
-        previousPlayerCards.$remove(lastPick);
+        let previousPlayerCards = $firebaseArray(db.child('draftProperties').child(draftId).child('players').child(playerId.$value).child('cardPool'));
+        previousPlayerCards.$loaded(function(cards) {
+          var lastPick = cards[cards.length-1];
+          setCardsIsDraftedStatus(lastPick, false);
+          previousPlayerCards.$remove(lastPick);
+        });
       });
     });
   };
 
-  function setCardToIsDrafted(card) {
+  function setCardsIsDraftedStatus(card, bool) {
     getActiveDraftId().then(function(draftId) {
       let activeCube = $firebaseArray(db.child('draftProperties').child(draftId).child('draftPool'));
       activeCube.$loaded(function(pool) {
@@ -310,6 +312,7 @@ function activeDraftService($firebaseArray,$firebaseObject) {
               case 'rollToLeftEdge':
                 newPosition--;
                 position--;
+                break;
               case 'rollToPreviousRoundLeft':
                 position++;
                 break;
@@ -319,7 +322,8 @@ function activeDraftService($firebaseArray,$firebaseObject) {
             angular.forEach(activePlayers, function(value,key) {
               if(value.draftPosition == newPosition) {
                 db.child('draftProperties').child(draftId).child('activePlayer').set(value.$id);
-              } else if(value.draftPosition == position) {
+              } 
+              if(value.draftPosition == position) {
                 db.child('draftProperties').child(draftId).child('previousPlayer').set(value.$id);
               } 
             });

@@ -7,7 +7,7 @@
 <h1>{{ activePlayer | uppercase }}'S PICK</h1>
 
 <div>
-  <button ng-click="undoLastPick()">Undo Previous Pick</button>
+  <button ng-click="undoConfirmation()">Undo Previous Pick</button>
 </div>
 
 <div class="draft-pool" ng-repeat="section in displayCube">
@@ -16,6 +16,14 @@
       <img src="http://gatherer.wizards.com/Handlers/Image.ashx?name={{ card.name }}&amp;set=&amp;type=card">
     </div>
   </li>
+</div>
+
+<div id="undo-dialog" class="modal">
+  <div class="modal-content">
+    <span class="close" ng-click="cancelUndo()">&times;</span>
+    <p>Are you sure you want to undo the previous pick?</p>
+    <button class="confirm-button" ng-click="undoLastPick()">CONFIRM</button>
+  </div>
 </div>
 
 <div id="card-dialog" class="modal">
