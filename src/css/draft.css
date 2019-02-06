@@ -70,3 +70,13 @@
 .confirm-button:hover {
   cursor: pointer;
 }
+
+.hover-enlarge {
+  transition: width 0s, height 0s;
+}
+
+.hover-enlarge:hover {
+  width: 80%;
+  height: 80%;
+  transition-delay: 1s;
+}

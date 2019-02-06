@@ -13,7 +13,7 @@
 <div class="draft-pool" ng-repeat="section in displayCube">
   <li ng-repeat="card in section">
     <div ng-click="selectCard(card)" class="card" ng-class="{ 'drafted' : card.isDrafted }">
-      <img src="http://gatherer.wizards.com/Handlers/Image.ashx?name={{ card.name }}&amp;set=&amp;type=card">
+      <img class="hover-enlarge" src="http://gatherer.wizards.com/Handlers/Image.ashx?name={{ card.name }}&amp;set=&amp;type=card">
     </div>
   </li>
 </div>
