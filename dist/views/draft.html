@@ -4,7 +4,7 @@
   <a href="/#!/player-pools/">Player Pools</a>
 </div>
 
-<h1>{{ activePlayer | uppercase }}'S PICK</h1>
+<h1>{{ activePlayer.name | uppercase }}'S PICK</h1>
 
 <div>
   <button ng-click="undoConfirmation()">Undo Previous Pick</button>
@@ -22,16 +22,16 @@
   <div class="modal-content">
     <span class="close" ng-click="cancelUndo()">&times;</span>
     <p>Are you sure you want to undo the previous pick?</p>
-    <button class="confirm-button" ng-click="undoLastPick()">CONFIRM</button>
+    <button class="confirm-button" ng-click="undoLastPick(activePlayer)">CONFIRM</button>
   </div>
 </div>
 
 <div id="card-dialog" class="modal">
   <div class="modal-content">
     <span class="close" ng-click="cancelCardSelection()">&times;</span>
-    <h1>{{ activePlayer | uppercase }}</h1>
+    <h1>{{ activePlayer.name | uppercase }}</h1>
     <p>Are you sure you want to pick {{ card.name }}?</p>
     <img class="modal-image" src="http://gatherer.wizards.com/Handlers/Image.ashx?name={{ card.name }}&amp;set=&amp;type=card">
-    <button class="confirm-button" ng-click="pickCard(card)">CONFIRM</button>
+    <button class="confirm-button" ng-click="pickCard(card,activePlayer)">CONFIRM</button>
   </div>
 </div>
