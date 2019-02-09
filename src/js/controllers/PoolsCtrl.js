@@ -9,7 +9,7 @@ PoolsCtrl.$inject = ['$scope','$firebaseArray','$firebaseObject'];
 function PoolsCtrl($scope,$firebaseArray,$firebaseObject) {
   const db = firebase.database().ref();
 
-	function getAllPlayers() {
+  function getAllPlayers() {
     return getActiveDraftId().then(function(draftId) {
       return $firebaseArray(db.child('draftProperties').child(draftId).child('players'));
     });

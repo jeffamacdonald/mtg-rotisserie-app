@@ -37497,11 +37497,25 @@ angular.module('rotoDraftApp', [
 		$routeProvider
 		.when('/home/', {
 			templateUrl: 'views/home.html',
-			controller: 'HomeCtrl'
+			controller: 'HomeCtrl',
+      resolve: {
+        'activeDraft': function($firebaseObject,activeDraftService) {
+          return activeDraftService.getActiveDraftId().then(function(draftId) {
+            return $firebaseObject(firebase.database().ref().child('draftProperties').child(draftId));
+          })
+        }
+      }
 		})
 		.when('/draft-pool/', {
 			templateUrl: 'views/draft.html',
-			controller: 'DraftCtrl'
+			controller: 'DraftCtrl',
+			resolve: {
+        'activeDraft': function($firebaseObject,activeDraftService) {
+          return activeDraftService.getActiveDraftId().then(function(draftId) {
+            return $firebaseObject(firebase.database().ref().child('draftProperties').child(draftId));
+          })
+        }
+			}
 		})
     .when('/player-pools/', {
       templateUrl: 'views/pools.html',
@@ -37514,244 +37528,7 @@ angular.module('rotoDraftApp', [
 
 angular
   .module('rotoDraftApp')
-  .controller('DraftCtrl', DraftCtrl);
-
-DraftCtrl.$inject = ['$scope','$firebaseArray','$firebaseObject','modalService','activeDraftService'];
-
-function DraftCtrl($scope,$firebaseArray,$firebaseObject,modalService,activeDraftService) {
-	const db = firebase.database().ref();
-  
-  activeDraftService.getActiveCube().then(function(cubeSections) {
-    $scope.displayCube = cubeSections;
-  });
-  activeDraftService.getActivePlayerName().then(function(player) {
-    $scope.activePlayer = player;
-  });
-  activeDraftService.getActivePlayerId().then(function(playerId) {
-    playerId.$watch(function() {
-      activeDraftService.getActivePlayerName().then(function(player) {
-        $scope.activePlayer = player;
-      });
-    });
-  });
-
-  $scope.selectCard = function(card) {
-    $scope.card = card;
-    modalService.displayModal(card);
-  };
-
-  $scope.cancelCardSelection = function() {
-    modalService.closeModal();
-  };
-    
-  $scope.pickCard = function(card) {
-    activeDraftService.pickCard(card);
-    modalService.closeModal();
-  };
-
-  $scope.undoLastPick = function() {
-    activeDraftService.undoPick();
-    document.getElementById('undo-dialog').style.display = 'none';
-  };
-
-  $scope.cancelUndo = function() {
-    document.getElementById('undo-dialog').style.display = 'none';
-  };
-
-  $scope.undoConfirmation = function() {
-    document.getElementById('undo-dialog').style.display = 'block';
-  };
-};
-})();
-(function() {
-
-angular
-  .module('rotoDraftApp')
-  .controller('HomeCtrl', HomeCtrl);
-
-HomeCtrl.$inject = ['$scope','$firebaseArray','$firebaseObject','activeDraftService','cubeService'];
-
-function HomeCtrl($scope,$firebaseArray,$firebaseObject,activeDraftService,cubeService) {
-  const db = firebase.database().ref();
-  let settingsModal = document.getElementById('draft-settings-dialog');
-
-  let draftProperties = $firebaseArray(db.child('draftProperties'));
-
-  let allPlayers = $firebaseArray(db.child('players'));
-  allPlayers.$loaded(function(players) {
-    players.forEach(function(player) {
-      player.isChecked = true;
-    })
-    $scope.players = players;
-  });
-
-  let allCubes = $firebaseArray(db.child('cubes'));
-  allCubes.$loaded(function(cubes) {
-    cubes.forEach(function(cube) {
-      cube.isChecked = false;
-    });
-    $scope.cubes = cubes;
-  });
-
-  $scope.numberOfRounds = 45;
-
-  $scope.draftSettingsModal = function() {
-    settingsModal.style.display = 'block';
-  }
-  $scope.cancelModal = function() {
-    settingsModal.style.display = 'none';
-  }
-
-  $scope.startNewDraft = function() {
-    settingsModal.style.display = 'none';
-    let newDraft = {
-      activeDraft: true,
-      totalRounds: $scope.numberOfRounds,
-      currentRound: 1
-    }
-    draftProperties.$add(newDraft).then(function(ref) {
-      draftProperties.$loaded(function(properties) {
-        let id = ref.key;
-        let newDraftRef = db.child('draftProperties').child(id);
-        angular.forEach(properties, function(value, key) {
-          if(value.$id != id) {
-            db.child('draftProperties').child(value.$id).child('activeDraft').set(false);
-          }
-        });
-        let cube = $scope.cubes.filter(function(cube) {
-          return cube.isChecked == true;
-        });
-        angular.forEach(cube[0].cards, function(value,key) {
-          $firebaseArray(newDraftRef.child('draftPool')).$add(value);
-        })
-
-        let draftPlayers = $scope.players.filter(function(player) {
-          return player.isChecked == true;
-        });
-        newDraftRef.child('playerCount').set(draftPlayers.length);
-        draftPlayers = shuffle(draftPlayers);
-        $scope.pickArray = initializePickArray(draftPlayers.length,$scope.numberOfRounds);
-        angular.forEach(draftPlayers, function(value, key) {
-          delete value.isChecked;
-          value.draftPosition = key+1;
-          $firebaseArray(newDraftRef.child('players')).$add(value).then(function(playerRef) {
-            if(key == 0) {
-              newDraftRef.child('activePlayer').set(playerRef.key);
-            }
-          });
-        });
-      });
-    });
-  };
-
-  $scope.textColor = function(card) {
-    if(card.colors == undefined && card.types == undefined) {
-      return;
-    } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.layout == 'transform' && card.colorIdentity[1] == 'W') || 
-      (card.colors != undefined && card.colorIdentity[0] == 'W' && card.colorIdentity.length == 1)) {
-      return {background:'white',color:'black'};
-    } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.layout == 'transform' && card.colorIdentity[1] == 'U') || 
-      (card.colors != undefined && card.colorIdentity[0] == 'U' && card.colorIdentity.length == 1)) {
-      return {background:'blue'};
-    } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.layout == 'transform' && card.colorIdentity[1] == 'B') || 
-      (card.colors != undefined && card.colorIdentity[0] == 'B' && card.colorIdentity.length == 1)) {
-      return {background:'black'};
-    } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.layout == 'transform' && card.colorIdentity[1] == 'R') || 
-      (card.colors != undefined && card.colorIdentity[0] == 'R' && card.colorIdentity.length == 1)) {
-      return {background:'#ff0000'};
-    } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.layout == 'transform' && card.colorIdentity[1] == 'G') || 
-      (card.colors != undefined && card.colorIdentity[0] == 'G' && card.colorIdentity.length == 1)) {
-      return {background:'green'};
-    } else if(card.colors != undefined && card.layout != 'transform' && card.colorIdentity.length > 1) {
-      return {background:'#e6c300',color:'black'};
-    } else if(arrayContains(card.types,'Land')) {
-      return {background:'#ffa64d',color:'black'};
-    } else {
-      return {background:'grey'};
-    }
-  }
-
-  function arrayContains(arr,str) {
-    return (arr.indexOf(str) > -1);
-  };
-
-  $scope.draftPicks = activeDraftService.getDraftArray();
-
-  activeDraftService.getAllPlayers().then(function(players) {
-    $scope.playerArray = players;
-  });
-
-  function initializePickArray(playerCount, totalRounds) {
-    var arr = []
-    for(var i=0;i<playerCount;i++) {
-      arr.push(['']);
-    }
-    return arr;
-  };
-
-  function shuffle(array) {
-    var currentIndex = array.length, temporaryValue, randomIndex;
-
-    // While there remain elements to shuffle...
-    while (0 !== currentIndex) {
-
-      // Pick a remaining element...
-      randomIndex = Math.floor(Math.random() * currentIndex);
-      currentIndex -= 1;
-
-      // And swap it with the current element.
-      temporaryValue = array[currentIndex];
-      array[currentIndex] = array[randomIndex];
-      array[randomIndex] = temporaryValue;
-    }
-
-    return array;
-  }
-
-  // let cardList = "Frenzied Goblin|Mogg Fanatic|Orcish Lumberjack|Lightning Bolt|Goblin Grenade|Firebolt|Galvanic Blast|Skirk Drill Sergeant|Ember Hauler|Goblin Wardriver|Mogg War Marshal|Sparksmith|Atog|Embersmith|Generator Servant|Goblin Lookout|Incinerate|Shrapnel Blast|Searing Blaze|Dragon Fodder|Krenko's Command|Tribal Flames|Arms Dealer|Spikeshot Goblin|Gempalm Incinerator|Goblin Artillery|Goblin Matron|Dragonsoul Knight|Orcish Mechanics|Hissing Iguanar|Brimstone Volley|Arc Lightning|Hordeling Outburst|Furnace Celebration|Honden of Infinite Rage|Beetleback Chief|Tar Pitcher|Scrapyard Mongrel|Treasonous Ogre|Kird Chieftain|Goblin Heelcutter|Solar Blast|Aftershock|Barrage Ogre|Emrakul's Hatcher|Pyrotechnics|Kuldotha Flamefiend|Rapacious One|Chartooth Cougar|Rolling Thunder|Fireball|Disciple of the Vault|Carnophage|Diregraf Ghoul|Typhoid Rats|Gnarled Scarhide|Shambling Goblin|Executioner's Capsule|Duress|Dark Ritual|Salvage Slasher|Knight of Infamy|Dauthi Slayer|Blind Creeper|Spiteful Returned|Fallen Askari|Augur of Skulls|Mesmeric Fiend|Bile Blight|Chainer's Edict|Doom Blade|Sign in Blood|Gatekeeper of Malakir|Bone Shredder|Phyrexian Rager|Necrogen Scudder|Cadaver Imp|Liliana's Specter|Vampire Nighthawk|Ichor Slick|Read the Bones|Drag Down|Murder|Drown in Sorrow|Moriok Scavenger|Disciple of Phenax|Squelching Leeches|Paragon of Open Graves|Liliana's Shade|Faceless Butcher|Tendrils of Corruption|Pestilence|Moan of the Unhallowed|Honden of Night's Reach|Gray Merchant of Asphodel|Warren Pilferers|Nightfire Giant|Mind Sludge|Dead Ringers|Twisted Abomination|Corrupt|Enslave|Avacyn's Pilgrim|Llanowar Elves|Elves of Deep Shadow|Joraga Treespeaker|Experiment One|Sunblade Elf|Prey Upon|Rancor|Vines of Vastwood|Sakura-Tribe Elder|Strangleroot Geist|Kalonian Tusker|Wild Mongrel|Shinen of Life's Roar|Sylvan Ranger|Wall of Blossoms|Albino Troll|River Boa|Mire Boa|Rampant Growth|Lignify|Sprout Swarm|Epic Confrontation|Naturalize|Civic Wayfinder|Yavimaya Elder|Grazing Gladehart|Matca Rioters|Imperious Perfect|Leatherback Baloth|Citanul Woodreaders|Cultivate|Elephant Guide|Beast Within|Kozilek's Predator|Penumbra Spider|Blastoderm|Briarhorn|Rhox Charger|Gaea's Embrace|Acidic Slime|Garruk's Packleader|Sentinel Spider|Honden of Life's Web|Baloth Woodcrasher|Durkwood Baloth|Deadwood Treefolk|Tromp the Domains|Krosan Tusker|Jungle Weaver|Pelakka Wurm|Elite Vanguard|Mardu Woe-Reaper|Steppe Lynx|Hopeful Eidolon|Akrasan Squire|Gideon's Lawkeeper|Dispeller's Capsule|Knight of Meadowgrain|Soltari Priest|Accorder Paladin|Cloistered Youth|Lone Missionary|Ajani's Pridemate|Dauntless River Marshal|Sigiled Paladin|Syndic of Tithes|Wall of Omens|Myrsmith|Aven Squire|Knight of Glory|Journey to Nowhere|Otherworldly Journey|Disenchant|Pacifism|Guardians of Akrasa|Flickerwisp|Fiend Hunter|Banisher Priest|Kor Sanctifiers|Attended Knight|Sandsteppe Outcast|Stonecloaker|Oblivion Ring|Arrest|Empyrial Armor|Griffin Guide|Blinding Beam|Sanctum Gargoyle|Auriok Salvagers|Glimmerpoint Stag|Master Splicer|Celestial Crusader|Faith's Fetters|Honden of Cleansing Fire|Cloudgoat Ranger|Guardian of the Gateless|Serra Angel|Gleam of Resistance|Noble Templar|Urbis Protector|Phantasmal Bear|Delver of Secrets|Nephalia Smuggler|Enclave Cryptologist|Preordain|Ponder|Silent Departure|Azure Mage|Welkin Tern|Vaporkin|Augur of Bolas|Frost Walker|Merfolk Looter|Narcolepsy|Essence Scatter|Mana Leak|Think Twice|Trinket Mage|Man-o'-War|Pestermite|Civilized Scholar|Jorubai Murk Lurker|Sea Gate Oracle|Prodigal Sorcerer|Calcite Snapper|Esperzoa|Claustrophobia|Dissolve|Stoic Rebuttal|Complicate|Thirst for Knowledge|Compulsive Research|Wing Splicer|Faerie Mechanist|Master Thief|Thieving Magpie|Ninja of the Deep Hours|Foresee|Wash Out|Ray of Command|Sleep|Riftwing Cloudskate|Mulldrifter|Air Servant|Mind Control|Traumatic Visions|Honden of Seeing Winds|Aethersnipe|Jetting Glasskite|Opportunity|Power Sink|Feudkiller's Verdict|Arcbound Worker|Chronomaton|Signal Pest|Origin Spellbomb|Panic Spellbomb|Pyrite Spellbomb|Bonesplitter|Trusty Machete|Arcbound Slith|Arcbound Stinger|Myr Retriever|Epochrasite|Myr Sire|Perilous Myr|Immolating Souleater|Gust-Skimmer|Spined Thopter|Necropede|Porcelain Legionnaire|Prophetic Prism|Ichor Wellspring|Mycosynth Wellspring|Mind Stone|Sylvok Replica|Cathodion|Palladium Myr|Pilgrim's Eye|Blinding Souleater|Kiln Walker|Moriok Replica|Skeleton Shard|Sickleslicer|Arcbound Hybrid|Etched Oracle|Juggernaut|Cogwork Librarian|Pierce Strider|Pith Driller|Slash Panther|Icy Manipulator|Serrated Arrows|Dross Golem|Clone Shell|Arcbound Bruiser|Skyreach Manta|Strandwalker|Darksteel Sentinel|Geistcatcher's Rig|Dreamstone Hedron|Tangle Golem|Ulamog's Crusher|Momentary Blink|Ardent Plea|Lyev Skyknight|Ethercaste Knight|Glassdust Hulk|Mortify|Pillory of the Sleepless|Tidehollow Sculler|Rally the Peasants|Flamewright|Warleader's Helix|Behemoth Sledge|Dryad Militant|Enlisted Wurm|Qasali Pridemage|Selesnya Evangel|Agony Warp|Warped Physique|Soul Manipulation|Tidehollow Strix|Moroii|Frostburn Weird|Izzet Charm|Izzet Chronarch|Beetleform Mage|Coiling Oracle|Snakeform|Bituminous Blast|Blightning|Terminate|Murderous Redcap|Spike Jester|Consume Strength|Dreg Mangler|Putrefy|Boggart Ram-Gang|Branching Bolt|Ghor-Clan Rampager|Savage Twister|Vengeful Rebirth|Fusion Elemental|Frontier Bivouac|Mystic Monastery|Nomad Outpost|Opulent Palace|Sandsteppe Citadel|Arcane Sanctum|Crumbling Necropolis|Jungle Shrine|Savage Lands|Seaside Citadel|Buried Ruin|Urza's Factory|Dread Statuary";
-
-  // // turn cardlist into array
-  // let cardArray = cardList.split("|");
-  // for (var i = 0; i < cardArray.length; i++) {
-  //   cardArray[i] = cardArray[i].trim();
-  // }
-  // cubeService.createNewCube(cardArray,'Alex\'s Pauper Cube');
-}
-})();
-(function() {
-
-angular
-  .module('rotoDraftApp')
-  .controller('PoolsCtrl', PoolsCtrl);
-
-PoolsCtrl.$inject = ['$scope','$firebaseArray','$firebaseObject'];
-
-function PoolsCtrl($scope,$firebaseArray,$firebaseObject) {
-  const db = firebase.database().ref();
-
-	function getAllPlayers() {
-    return getActiveDraftId().then(function(draftId) {
-      return $firebaseArray(db.child('draftProperties').child(draftId).child('players'));
-    });
-  };
-
-  function getActiveDraftId() {
-    let activeDraft = $firebaseArray(firebase.database().ref().child('draftProperties').orderByChild('activeDraft').equalTo(true));
-    return activeDraft.$loaded(function(draft) {
-      return draft[0].$id;
-    });
-  };
-
-  getAllPlayers().then(function(drafters) {
-    $scope.drafters = drafters;
-  });
-};
-})();
-(function() {
-
-angular
-	.module('rotoDraftApp')
-	.service('activeDraftService', activeDraftService);
+  .service('activeDraftService', activeDraftService);
 
 activeDraftService.$inject = ['$firebaseArray','$firebaseObject'];
 
@@ -37759,61 +37536,51 @@ function activeDraftService($firebaseArray,$firebaseObject) {
   var self = this;
   const db = firebase.database().ref();
 
-  this.getActiveCube = function() {
-    return getActiveDraftId().then(function(draftId) {
-      let draftPool = $firebaseArray(db.child('draftProperties').child(draftId).child('draftPool'));
-      return draftPool.$loaded(function(pool) {
-        cubeArr = []
-        colorSections = ['W','U','B','R','G'];
-        goldSections = [
-          ['W','U'],
-          ['W','B'],
-          ['W','R'],
-          ['W','G'],
-          ['U','B'],
-          ['U','R'],
-          ['U','G'],
-          ['B','R'],
-          ['B','G'],
-          ['R','G']
-        ]
-        colorSections.forEach(function(color) {
-          cubeArr.push(getPoolByColor(pool,color));
-        });
-        goldSections.forEach(function(colorPair) {
-          cubeArr.push(getGoldPoolByColorPair(pool,colorPair[0],colorPair[1]));
-        });
-        cubeArr.push(getRemainingGoldPool(pool));
-        cubeArr.push(getColorlessPool(pool));
-        cubeArr.push(getLandPool(pool));
-        return cubeArr
+  this.getActiveCube = function(draft) {
+    return $firebaseArray(draft.$ref().child('draftPool')).$loaded(function(pool) {
+      cubeArr = []
+      colorSections = ['W','U','B','R','G'];
+      goldSections = [
+        ['W','U'],
+        ['W','B'],
+        ['W','R'],
+        ['W','G'],
+        ['U','B'],
+        ['U','R'],
+        ['U','G'],
+        ['B','R'],
+        ['B','G'],
+        ['R','G']
+      ]
+      colorSections.forEach(function(color) {
+        cubeArr.push(getPoolByColor(pool,color));
       });
+      goldSections.forEach(function(colorPair) {
+        cubeArr.push(getGoldPoolByColorPair(pool,colorPair[0],colorPair[1]));
+      });
+      cubeArr.push(getRemainingGoldPool(pool));
+      cubeArr.push(getColorlessPool(pool));
+      cubeArr.push(getLandPool(pool));
+      return cubeArr
     });
   };
 
-  this.getActivePlayerName = function() {
-    return getActiveDraftId().then(function(draftId) {
-      return self.getActivePlayerId(draftId).then(function(playerId) {
-        let activePlayerName = $firebaseObject(db.child('draftProperties').child(draftId).child('players').child(playerId.$value).child('name'));
-        return activePlayerName.$loaded(function(name) {
-          return name.$value;
-        });
-      });
-    });
+  this.pickCard = function(card,draft,playerId) {
+    addCardToActivePlayerPool(card,draft,playerId);
+    setCardsIsDraftedStatus(card,draft,true);
+    setNextPlayerActive(draft,playerId,false);
   };
 
-  this.pickCard = function(card) {
-    addCardToActivePlayerPool(card);
-    setCardsIsDraftedStatus(card, true);
-    setNextPlayerActive(false);
+  this.undoPick = function(draft,playerId) {
+    removeCardFromPreviousPlayerPool(draft);
+    setNextPlayerActive(draft,playerId,true);
   };
 
-  this.undoPick = function() {
-    removeCardFromPreviousPlayerPool();
-    setNextPlayerActive(true);
+  this.getAllDrafters = function(draft) {
+    return $firebaseArray(draft.$ref().child('players'));
   };
 
-  this.getAllPlayers = function() {
+  this.getAllPlayers = function(draft) {
     return getActiveDraftId().then(function(draftId) {
       return $firebaseArray(db.child('draftProperties').child(draftId).child('players'));
     });
@@ -37849,12 +37616,16 @@ function activeDraftService($firebaseArray,$firebaseObject) {
   };
 
   // get active ids
-  this.getActivePlayerId = function() {
-    return getActiveDraftId().then(function(draftId) {
-      let activePlayer = $firebaseObject(db.child('draftProperties').child(draftId).child('activePlayer'));
-      return activePlayer.$loaded(function(playerId) {
-        return playerId;
-      });
+  this.getActivePlayerId = function(draft) {
+    return $firebaseObject(draft.$ref().child('activePlayer'));
+  };
+
+  this.getActiveDraftId = function() {
+    return $firebaseArray(firebase.database().ref()
+        .child('draftProperties')
+        .orderByChild('activeDraft')
+        .equalTo(true)).$loaded(function(draft) {
+      return draft[0].$id;
     });
   };
 
@@ -37866,38 +37637,30 @@ function activeDraftService($firebaseArray,$firebaseObject) {
   };
 
   // Pick card functions
-  function addCardToActivePlayerPool(card) {
-    getActiveDraftId().then(function(draftId) {
-      self.getActivePlayerId(draftId).then(function(playerId) {
-        let activePlayerCards = $firebaseArray(db.child('draftProperties').child(draftId).child('players').child(playerId.$value).child('cardPool'));
-        activePlayerCards.$add(card);
+  function addCardToActivePlayerPool(card,draft,playerId) {
+    let activePlayerCards = $firebaseArray(draft.$ref().child('players').child(playerId).child('cardPool'));
+    activePlayerCards.$add(card);
+  };
+
+  function removeCardFromPreviousPlayerPool(draft) {
+    let previousPlayer = $firebaseObject(draft.$ref().child('previousPlayer'));
+    previousPlayer.$loaded(function(playerId) {
+      let previousPlayerCards = $firebaseArray(draft.$ref().child('players').child(playerId.$value).child('cardPool'));
+      previousPlayerCards.$loaded(function(cards) {
+        var lastPick = cards[cards.length-1];
+        setCardsIsDraftedStatus(lastPick, draft, false);
+        previousPlayerCards.$remove(lastPick);
       });
     });
   };
 
-  function removeCardFromPreviousPlayerPool() {
-    getActiveDraftId().then(function(draftId) {
-      let previousPlayer = $firebaseObject(db.child('draftProperties').child(draftId).child('previousPlayer'));
-      previousPlayer.$loaded(function(playerId) {
-        let previousPlayerCards = $firebaseArray(db.child('draftProperties').child(draftId).child('players').child(playerId.$value).child('cardPool'));
-        previousPlayerCards.$loaded(function(cards) {
-          var lastPick = cards[cards.length-1];
-          setCardsIsDraftedStatus(lastPick, false);
-          previousPlayerCards.$remove(lastPick);
-        });
-      });
-    });
-  };
-
-  function setCardsIsDraftedStatus(card, bool) {
-    getActiveDraftId().then(function(draftId) {
-      let activeCube = $firebaseArray(db.child('draftProperties').child(draftId).child('draftPool'));
-      activeCube.$loaded(function(pool) {
-        angular.forEach(pool, function(value,key) {
-          if(value.name == card.name) {
-            db.child('draftProperties').child(draftId).child('draftPool').child(value.$id).child('isDrafted').set(bool);
-          }
-        });
+  function setCardsIsDraftedStatus(card, draft, bool) {
+    let activeCube = $firebaseArray(draft.$ref().child('draftPool'));
+    activeCube.$loaded(function(pool) {
+      angular.forEach(pool, function(value,key) {
+        if(value.name == card.name) {
+          draft.$ref().child('draftPool').child(value.$id).child('isDrafted').set(bool);
+        }
       });
     });
   };
@@ -37981,21 +37744,74 @@ function activeDraftService($firebaseArray,$firebaseObject) {
     return (arr.indexOf(str) > -1);
   };
 
-  function getActivePlayerPosition() {
-    return getActiveDraftId().then(function(draftId) {
-      return self.getActivePlayerId().then(function(playerId) {
-        let activePlayerPosition = $firebaseObject(db.child('draftProperties').child(draftId).child('players').child(playerId.$value).child('draftPosition'));
-        return activePlayerPosition.$loaded(function(playerPosition) {
-          return playerPosition.$value;
+  function getActivePlayerPosition(draft,playerId) {
+    let activePlayerPosition = $firebaseObject(draft.$ref().child('players').child(playerId).child('draftPosition'));
+    return activePlayerPosition.$loaded(function(playerPosition) {
+      return playerPosition.$value;
+    });
+  };
+
+  function setNextRound(draft) {
+    draft.$ref().child('currentRound').set(draft.currentRound+1);
+  };
+
+  function setPreviousRound(draft) {
+    draft.$ref().child('currentRound').set(draft.currentRound-1);
+  };
+
+  function setNextPlayerActive(draft,playerId,rollbackBool) {
+    getActivePlayerPosition(draft,playerId).then(function(position) {
+      let players = $firebaseArray(draft.$ref().child('players'));
+      players.$loaded(function(activePlayers) {
+        getSnakeDirection(draft, position, rollbackBool).then(function(direction) {
+          var newPosition = position;
+          switch(direction) {
+            case 'right':
+              newPosition++;
+              break;
+            case 'rollRight':
+              newPosition++;
+              position = position + 2;
+              break;
+            case 'rollToRightEdge':
+              newPosition++;
+              position++;
+              break;
+            case 'rollToPreviousRoundRight':
+              position--;
+              break;
+            case 'left':
+              newPosition--;
+              break;
+            case 'rollLeft':
+              newPosition--;
+              position = position - 2;
+              break;
+            case 'rollToLeftEdge':
+              newPosition--;
+              position--;
+              break;
+            case 'rollToPreviousRoundLeft':
+              position++;
+              break;
+            default:
+              break;
+          }
+          angular.forEach(activePlayers, function(value,key) {
+            if(value.draftPosition == newPosition) {
+              draft.$ref().child('activePlayer').set(value.$id);
+            } 
+            if(value.draftPosition == position) {
+              draft.$ref().child('previousPlayer').set(value.$id);
+            } 
+          });
         });
       });
     });
   };
 
-  function getSnakeDirection(playerPosition, rollbackBool) {
-    return getActiveDraftId().then(function(draftId) {
-      let activeDraft = $firebaseObject(db.child('draftProperties').child(draftId));
-      return activeDraft.$loaded(function(draft) {
+  function getSnakeDirection(draft, playerPosition, rollbackBool) {
+      return draft.$loaded(function(draft) {
         if(draft.currentRound % 2 == 0 && playerPosition > 1 && rollbackBool == false) {
           return 'left';
         } else if (draft.currentRound % 2 == 0 && playerPosition < draft.playerCount-1 && rollbackBool) {
@@ -38018,68 +37834,6 @@ function activeDraftService($firebaseArray,$firebaseObject) {
           setNextRound(draft);
         }
       });
-    });
-  };
-
-  function setNextRound(draft) {
-    db.child('draftProperties').child(draft.$id).child('currentRound').set(draft.currentRound+1);
-  };
-
-  function setPreviousRound(draft) {
-    db.child('draftProperties').child(draft.$id).child('currentRound').set(draft.currentRound-1);
-  };
-
-  function setNextPlayerActive(rollbackBool) {
-    getActiveDraftId().then(function(draftId) {
-      getActivePlayerPosition().then(function(position) {
-        let players = $firebaseArray(db.child('draftProperties').child(draftId).child('players'));
-        players.$loaded(function(activePlayers) {
-          getSnakeDirection(position, rollbackBool).then(function(direction) {
-            var newPosition = position;
-            switch(direction) {
-              case 'right':
-                newPosition++;
-                break;
-              case 'rollRight':
-                newPosition++;
-                position = position + 2;
-                break;
-              case 'rollToRightEdge':
-                newPosition++;
-                position++;
-                break;
-              case 'rollToPreviousRoundRight':
-                position--;
-                break;
-              case 'left':
-                newPosition--;
-                break;
-              case 'rollLeft':
-                newPosition--;
-                position = position - 2;
-                break;
-              case 'rollToLeftEdge':
-                newPosition--;
-                position--;
-                break;
-              case 'rollToPreviousRoundLeft':
-                position++;
-                break;
-              default:
-                break;
-            }
-            angular.forEach(activePlayers, function(value,key) {
-              if(value.draftPosition == newPosition) {
-                db.child('draftProperties').child(draftId).child('activePlayer').set(value.$id);
-              } 
-              if(value.draftPosition == position) {
-                db.child('draftProperties').child(draftId).child('previousPlayer').set(value.$id);
-              } 
-            });
-          });
-        });
-      });
-    });
   };
 
 };
@@ -38194,5 +37948,246 @@ function modalService() {
   this.closeModal = function() {
     document.getElementById('card-dialog').style.display = 'none';
   };
+};
+})();
+(function() {
+
+angular
+  .module('rotoDraftApp')
+  .controller('DraftCtrl', DraftCtrl);
+
+DraftCtrl.$inject = ['$scope','$firebaseArray','$firebaseObject','modalService','activeDraftService','activeDraft'];
+
+function DraftCtrl($scope,$firebaseArray,$firebaseObject,modalService,activeDraftService,activeDraft) {
+  let allDrafters = activeDraftService.getAllDrafters(activeDraft);
+  let activePlayerId = activeDraftService.getActivePlayerId(activeDraft);
+
+  // Display current player's name
+  activePlayerId.$watch(function() {
+    angular.forEach(allDrafters,function(value,key) {
+      if(value.$id == activePlayerId.$value) {
+        $scope.activePlayer = value;
+      }
+    });
+  });
+
+  // Display Cube
+  activeDraftService.getActiveCube(activeDraft).then(function(cube) {
+    $scope.displayCube = cube;
+  });
+
+  $scope.selectCard = function(card) {
+    $scope.card = card;
+    modalService.displayModal(card);
+  };
+
+  $scope.cancelCardSelection = function() {
+    modalService.closeModal();
+  };
+
+  $scope.pickCard = function(card,activePlayer) {
+    activeDraftService.pickCard(card,activeDraft,activePlayer.$id);
+    modalService.closeModal();
+  };
+
+  $scope.undoLastPick = function(activePlayer) {
+    activeDraftService.undoPick(activeDraft,activePlayer.$id);
+    document.getElementById('undo-dialog').style.display = 'none';
+  };
+
+  $scope.cancelUndo = function() {
+    document.getElementById('undo-dialog').style.display = 'none';
+  };
+
+  $scope.undoConfirmation = function() {
+    document.getElementById('undo-dialog').style.display = 'block';
+  };
+};
+})();
+(function() {
+
+angular
+  .module('rotoDraftApp')
+  .controller('HomeCtrl', HomeCtrl);
+
+HomeCtrl.$inject = ['$scope','$firebaseArray','$firebaseObject','activeDraftService','cubeService','activeDraft'];
+
+function HomeCtrl($scope,$firebaseArray,$firebaseObject,activeDraftService,cubeService,activeDraft) {
+  const db = firebase.database().ref();
+  let settingsModal = document.getElementById('draft-settings-dialog');
+
+  let draftProperties = $firebaseArray(db.child('draftProperties'));
+  let allDrafters = activeDraftService.getAllDrafters(activeDraft);
+
+  let allPlayers = $firebaseArray(db.child('players'));
+  allPlayers.$loaded(function(players) {
+    players.forEach(function(player) {
+      player.isChecked = true;
+    })
+    $scope.players = players;
+  });
+
+  let allCubes = $firebaseArray(db.child('cubes'));
+  allCubes.$loaded(function(cubes) {
+    cubes.forEach(function(cube) {
+      cube.isChecked = false;
+    });
+    $scope.cubes = cubes;
+  });
+
+  $scope.numberOfRounds = 45;
+
+  $scope.draftSettingsModal = function() {
+    settingsModal.style.display = 'block';
+  }
+  $scope.cancelModal = function() {
+    settingsModal.style.display = 'none';
+  }
+
+  $scope.startNewDraft = function() {
+    settingsModal.style.display = 'none';
+    let newDraft = {
+      activeDraft: true,
+      totalRounds: $scope.numberOfRounds,
+      currentRound: 1
+    }
+    draftProperties.$add(newDraft).then(function(ref) {
+      draftProperties.$loaded(function(properties) {
+        let id = ref.key;
+        let newDraftRef = db.child('draftProperties').child(id);
+        angular.forEach(properties, function(value, key) {
+          if(value.$id != id) {
+            db.child('draftProperties').child(value.$id).child('activeDraft').set(false);
+          }
+        });
+        let cube = $scope.cubes.filter(function(cube) {
+          return cube.isChecked == true;
+        });
+        angular.forEach(cube[0].cards, function(value,key) {
+          $firebaseArray(newDraftRef.child('draftPool')).$add(value);
+        })
+
+        let draftPlayers = $scope.players.filter(function(player) {
+          return player.isChecked == true;
+        });
+        newDraftRef.child('playerCount').set(draftPlayers.length);
+        draftPlayers = shuffle(draftPlayers);
+        $scope.pickArray = initializePickArray(draftPlayers.length,$scope.numberOfRounds);
+        angular.forEach(draftPlayers, function(value, key) {
+          delete value.isChecked;
+          value.draftPosition = key+1;
+          $firebaseArray(newDraftRef.child('players')).$add(value).then(function(playerRef) {
+            if(key == 0) {
+              newDraftRef.child('activePlayer').set(playerRef.key);
+            }
+          });
+        });
+      });
+    });
+  };
+
+  $scope.textColor = function(card) {
+    if(card.colors == undefined && card.types == undefined) {
+      return;
+    } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.layout == 'transform' && card.colorIdentity[1] == 'W') || 
+      (card.colors != undefined && card.colorIdentity[0] == 'W' && card.colorIdentity.length == 1)) {
+      return {background:'white',color:'black'};
+    } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.layout == 'transform' && card.colorIdentity[1] == 'U') || 
+      (card.colors != undefined && card.colorIdentity[0] == 'U' && card.colorIdentity.length == 1)) {
+      return {background:'blue'};
+    } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.layout == 'transform' && card.colorIdentity[1] == 'B') || 
+      (card.colors != undefined && card.colorIdentity[0] == 'B' && card.colorIdentity.length == 1)) {
+      return {background:'black'};
+    } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.layout == 'transform' && card.colorIdentity[1] == 'R') || 
+      (card.colors != undefined && card.colorIdentity[0] == 'R' && card.colorIdentity.length == 1)) {
+      return {background:'#ff0000'};
+    } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.layout == 'transform' && card.colorIdentity[1] == 'G') || 
+      (card.colors != undefined && card.colorIdentity[0] == 'G' && card.colorIdentity.length == 1)) {
+      return {background:'green'};
+    } else if(card.colors != undefined && card.layout != 'transform' && card.colorIdentity.length > 1) {
+      return {background:'#e6c300',color:'black'};
+    } else if(arrayContains(card.types,'Land')) {
+      return {background:'#ffa64d',color:'black'};
+    } else {
+      return {background:'grey'};
+    }
+  }
+
+  function arrayContains(arr,str) {
+    return (arr.indexOf(str) > -1);
+  };
+
+  allDrafters.$watch(function() {
+    $scope.draftPicks = activeDraftService.getDraftArray();
+  });
+
+  activeDraftService.getAllPlayers().then(function(players) {
+    $scope.playerArray = players;
+  });
+
+  function initializePickArray(playerCount, totalRounds) {
+    var arr = []
+    for(var i=0;i<playerCount;i++) {
+      arr.push(['']);
+    }
+    return arr;
+  };
+
+  function shuffle(array) {
+    var currentIndex = array.length, temporaryValue, randomIndex;
+
+    // While there remain elements to shuffle...
+    while (0 !== currentIndex) {
+
+      // Pick a remaining element...
+      randomIndex = Math.floor(Math.random() * currentIndex);
+      currentIndex -= 1;
+
+      // And swap it with the current element.
+      temporaryValue = array[currentIndex];
+      array[currentIndex] = array[randomIndex];
+      array[randomIndex] = temporaryValue;
+    }
+
+    return array;
+  }
+
+  // let cardList = "Tundra|Scrubland|Plateau|Savannah|Underground Sea|Volcanic Island|Tropical Island|Badlands|Bayou|Taiga|Hallowed Fountain|Godless Shrine|Sacred Foundry|Temple Garden |Watery Grave|Steam Vents|Breeding Pool|Blood Crypt|Overgrown Tomb|Stomping Ground|Flooded Strand|Marsh Flats|Arid Mesa |Windswept Heath|Polluted Delta|Scalding Tarn|Misty Rainforest|Bloodstained Mire|Verdant Catacombs|Wooded Foothills|Celestial Colonnade|Shambling Vent|Needle Spires|Stirring Wildwood|Creeping Tar Pit|Wandering Fumarole|Lumbering Falls|Lavaclaw Reaches|Hissing Quagmire|Raging Ravine|Mishra's Factory|City of Brass|Gemstone Mine|Evolving Wilds|Terramorphic Expanse|Mana Confluence|Forbidden Orchard|Undiscovered Paradise|Library of Alexandria|Ancient Tomb|City of Traitors|Strip Mine|Wasteland|Rishadan Port|Bazaar of Baghdad|Maze of Ith|Mishra's Workshop|Westvale Abbey|The Tabernacle at Pendrell Vale|Darksteel Citadel|Black Lotus|Mox Sapphire|Mox Emerald|Mox Jet|Mox Pearl|Mox Ruby|Mana Crypt|Mox Diamond|Chrome Mox|Zuran Orb|Voltaic Key|Sol Ring|Mana Vault|Sensei's Divining Top|Skullclamp|Cursed Scroll|Bonesplitter|Relic of Progenitus|Lightning Greaves|Cranial Plating|Anvil of Bogardan|Grim Monolith|Umezawa's Jitte|Scroll Rack|Ankh of Mishra|Altar of Dementia|Sphere of Resistance|Mind Stone|Winter Orb|Chaos Orb|Coalition Relic|Crucible of Worlds|Tangle Wire |Worn Powerstone|Sword of Fire and Ice|Horn of Greed|Sword of Light and Shadow|Sword of Feast and Famine|Mimic Vat|Ensnaring Bridge|Grafted Wargear|Sands of Delirium|Thran Dynamo|Smokestack|Nevinyrral's Disk|Phyrexian Processor|Erratic Portal|Gilded Lotus|Memory Jar|Karn Liberated|All Is Dust|Everflowing Chalice |Engineered Explosives |Hangarback Walker|Emrakul, the Aeons Torn|Ulamog, the Ceaseless Hunger|Sundering Titan|Myr Battlesphere|Wurmcoil Engine|Scuttling Doom Engine|Triskelion|Batterskull|Precursor Golem|Solemn Simulacrum|Lodestone Golem|Crystalline Crawler|Traxos, Scourge of Kroog|Metalworker|Cultivator's Caravan|Filigree Familiar|Foundry Inspector|Scrap Trawler|Spellskite|Phyrexian Revoker|Smuggler's Copter|Epochrasite|Arcbound Ravager|Metallic Mimic|Steel Overseer|Signal Pest|Karakas|Windbrisk Heights|Kytheon, Hero of Akros|Isamaru, Hound of Konda|Mother of Runes|Student of Warfare|Soldier of the Pantheon|Champion of the Parish|Dauntless Bodyguard|Swords to Plowshares|Path to Exile|Land Tax|Enlightened Tutor|Mana Tithe|Stoneforge Mystic|Porcelain Legionnaire|Thalia, Guardian of Thraben|Spirit of the Labyrinth|Leonin Relic-Warder|Wall of Omens|Imposing Sovereign|Accorder Paladin|Containment Priest|Gather the Townsfolk|Selfless Spirit|Thalia's Lieutenant|Squadron Hawk|Hanweir Militia Captain|Glory-Bound Initiate|Suture Priest|Balance|Revoke Existence|Disenchant|Journey to Nowhere|Monastery Mentor|Blade Splicer|Mirran Crusader|Brimaz, King of Oreskos|Banisher Priest|Fiend Hunter|Silverblade Paladin|Flickerwisp|Mirror Entity |Recruiter of the Guard|Thalia, Heretic Cathar|Soltari Champion|Loyal Retainers|Vryn Wingmare|History of Benalia|Oblivion Ring|Collective Effort|Ghostly Prison|Restoration Angel|Hero of Bladehold|Academy Rector|Gisela, the Broken Blade|Sram's Expertise|Armageddon|Elspeth, Knight-Errant|Faith's Fetters|Wrath of God|Parallax Wave|Angelic Destiny|Moat|Citadel Siege|Reveillark|Karmic Guide|Archangel of Thune|Archangel Avacyn|Angel of Invention|Death or Glory|Righteous Confluence|Elspeth, Sun's Champion|Akroma's Vengeance|Elesh Norn, Grand Cenobite|Angel of Serenity |Entreat the Angels|Secure the Wastes|Decree of Justice|Martial Coup|Tolarian Academy|Shelldock Isle|Enclave Cryptologist|Hedron Crab|Ancestral Recall|Brainstorm|Mystical Tutor|Ponder|Preordain|Force Spike|Spell Pierce|Snapcaster Mage |Jace, Vryn's Prodigy|Phantasmal Image|Gilded Drake|Thing in the Ice|Augur of Bolas|Mindshrieker|Time Walk|Copy Artifact|Dig Through Time|Chart a Course|Impulse|Mana Drain|Counterspell|Mana Leak|Daze|Remand|Negate|Vendilion Clique|Man-o'-War|Deceiver Exarch|Champion of Wits|Nimble Obstructionist|Master of Etherium|Jace's Archivist|Skaab Ruinator|Tinker|Capsize|Imprisoned in the Moon|Sphinx's Tutelage|Vedalken Shackles|Thirst for Knowledge|Frantic Search|Timetwister|Intuition|Forbid|Supreme Will |Exclude|Phyrexian Metamorph|Glen Elendra Archmage|Venser, Shaper Savant|Sower of Temptation|Control Magic|Whirler Rogue|Reef Worm|Opposition|Mechanized Production|Jace, the Mind Sculptor|Fact or Fiction|Deep Analysis|Gifts Ungiven|Cryptic Command|Mulldrifter|Meloku the Clouded Mirror|Clocknapper|Treachery|Tezzeret the Seeker|Sunder|Mystic Confluence|Gush|Force of Will|Pact of Negation|Consecrated Sphinx|Torrential Gearhulk|Upheaval|Palinchron|Inkwell Leviathan|Treasure Cruise|Increasing Confusion|Volrath's Stronghold|Cryptbreaker|Putrid Imp|Viscera Seer|Reanimate|Entomb|Vampiric Tutor|Thoughtseize|Duress|Dark Ritual|Fatal Push|Tragic Slip|Pack Rat|Mesmeric Fiend|Dark Confidant|Bloodghast|Blood Artist|Bitterblossom|Zulaport Cutthroat|Scrapheap Scrounger|Rotting Rats|Reassembling Skeleton|Animate Dead|Demonic Tutor|Hymn to Tourach|Sinkhole|Malicious Affliction|Go for the Throat|Smallpox|Night's Whisper|Collective Brutality|Vampire Nighthawk|Bone Shredder|Ophiomancer|Xathrid Necromancer|Pawn of Ulamog|Flesh Carver|Stinkweed Imp|Nighthowler|Undercity Informer|Undead Gladiator|Recurring Nightmare|Liliana of the Veil|Toxic Deluge|Necropotence|Hero's Downfall|Contamination|Bitter Ordeal|Victimize |Buried Alive|Skinrender|Braids, Cabal Minion|Crypt Ghast |Abyssal Persecutor |Disciple of Phenax|Xiahou Dun, the One-Eyed|Mindwrack Demon|Whip of Erebos|Damnation|Snuff Out|The Abyss|Sever the Bloodline|Tombstone Stairwell|Phyrexian Scriptures|Dread Return|Shriekmaw|Gray Merchant of Asphodel|Endrek Sahr, Master Breeder|Living Death|Palace Siege|Liliana, Death's Majesty|Grave Titan|Kokusho, the Evening Star|Noxious Gearhulk|Yawgmoth's Bargain|Abhorrent Overlord|Griselbrand|Dread Summons|Mind Twist|Battle at the Bridge|Spitfire Bastion|Goblin Guide|Grim Lavamancer|Zurgo Bellstriker|Greater Gargadon|Goblin Welder|Monastery Swiftspear|Legion Loyalist|Falkenrath Gorger|Lightning Bolt|Chain Lightning|Burst Lightning|Gamble|Faithless Looting|Vandalblast|Reckless Charge|Young Pyromancer|Stormblood Berserker|Mogg War Marshal|Torch Fiend|Ember Hauler|Harsh Mentor|Immolating Souleater|Earthshaker Khenra|Kari Zev, Skyship Raider|War-Name Aspirant|Goblin Bushwhacker|Incinerate|Magma Jet|Searing Blaze|Mizzium Mortars|Goblin Bombardment|Pyroclasm |Abrade|Arc Trail|Pyrewild Shaman|Shrine of Burning Rage|Goblin Rabblemaster|Imperial Recruiter|Hordeling Outburst|Pia Nalaar|Rampaging Ferocidon|Hissing Iguanar|Goblin Sharpshooter|Sin Prodder|Combat Celebrant|Sulfuric Vortex|Wheel of Fortune|Blast from the Past|Brimstone Volley |Kari Zev's Expertise|Rift Bolt|Collective Defiance|Dynacharge|Flametongue Kavu|Hero of Oxid Ridge|Avalanche Riders|Hellrider|Pia and Kiran Nalaar|Goblin Heelcutter|Purphoros, God of the Forge|Sneak Attack|Stoke the Flames|Daretti, Scrap Savant|Chandra, Torch of Defiance|Zealous Conscripts|Siege-Gang Commander|Kiki-Jiki, Mirror Breaker|Neheb, the Eternal|Sarkhan, the Dragonspeaker|Inferno Titan|Combustible Gearhulk|Wildfire|Fireblast|Chandra, Bold Pyromancer|Devastation|Bogardan Hellkite|Bonfire of the Damned|Devil's Play|Rolling Earthquake|Gaea's Cradle|Noble Hierarch|Birds of Paradise|Llanowar Elves|Joraga Treespeaker|Quirion Ranger|Arbor Elf|Worldly Tutor|Fastbond|Rancor|Berserk|Nature's Claim|Crop Rotation|Exploration|Blossoming Defense|Rofellos, Llanowar Emissary|Lotus Cobra|Sylvan Caryatid|Scavenging Ooze|Tarmogoyf|Wall of Blossoms|Wall of Roots|Sakura-Tribe Elder|Mayor of Avabruck|Priest of Titania|Hermit Druid|Duskwatch Recruiter|Bloom Tender|Satyr Wayfinder|Channel|Regrowth|Survival of the Fittest|Sylvan Library|Life from the Loam|Oath of Druids|Mulch|Nostalgic Dreams|Eternal Witness|Courser of Kruphix|Reclamation Sage|Den Protector|Call of the Herd|Elvish Archdruid|Tireless Tracker|Imperious Perfect|Fierce Empath|Kodama's Reach|Song of the Dryads|Beast Within|Search for Tomorrow|Oracle of Mul Daya|Polukranos, World Eater|Roar of the Wurm|Caller of the Untamed|Centaur Vinecrasher|Garruk Wildspeaker|Natural Order|Harmonize|Acidic Slime|Thragtusk|Deranged Hermit|Grizzly Fate|Golgari Grave-Troll|Titania, Protector of Argoth|Garruk, Primal Hunter|Plow Under|Primal Command|Stunted Growth|The Mending of Dominaria|Primeval Titan|Rampaging Baloths|Avenger of Zendikar|Regal Force|Hornet Queen|Tooth and Nail|Terastodon|Woodfall Primus|Craterhoof Behemoth|Green Sun's Zenith|Genesis Wave|Geist of Saint Traft|Reflector Mage|Spell Queller|Brago, King Eternal |Venser, the Sojourner|Migratory Route|Cloudblazer|Momentary Blink|Detention Sphere|Sphinx's Revelation |Lingering Souls|Vona, Butcher of Magan|Desolation Angel|Magister of Worth|Ashen Rider|Vindicate|Sorin, Lord of Innistrad|Utter End|Kaya, Ghost Assassin|Unburial Rites|Figure of Destiny|Bruse Tarl, Boorish Herder|Kalemne, Disciple of Iroas|Assemble the Legion|Lightning Helix|Boros Charm|Rally the Peasants|Ajani Vengeant|Huatli, Warrior Poet|Aurelia's Fury|Avacyn's Pilgrim|Voice of Resurgence|Qasali Pridemage|Gaddock Teeg|Saffi Eriksdotter|Kitchen Finks|Knight of the Reliquary|Gavony Township|Huatli, Radiant Champion|Mirari's Wake|Baleful Strix|Psychatog|Nightveil Specter|Hostage Taker|The Scarab God|Dragonlord Silumgar|Lim-Dûl's Vault|Glimpse the Unthinkable|Ashiok, Nightmare Weaver|Tezzeret, Agent of Bolas|Jhoira of the Ghitu|Herald of Kozilek|Keranos, God of Storms|Izzet Charm|Fire // Ice|Electrolyze|Ral Zarek|Izzet Chronarch|Brutal Expulsion|Prophetic Bolt|Wood Sage|Kiora's Follower|Trygon Predator|Shardless Agent|Kiora, the Crashing Wave|Master Biomancer|Simic Sky Swallower|Prophet of Kruphix|Memory's Journey|Tracker's Instincts|Grenzo, Dungeon Warden|Vial Smasher the Fierce|Murderous Redcap|Falkenrath Aristocrat|Dreadbore|Terminate|Blightning|Kolaghan's Command|Bituminous Blast|Rakdos's Return|Deathrite Shaman|Grim Flayer|Lotleth Troll|Life // Death|Maelstrom Pulse|Abrupt Decay|Squandered Resources|Pernicious Deed|Deadbridge Chant|Garruk, Apex Predator|Orcish Lumberjack|Flinthoof Boar|Bloodbraid Elf|Ghor-Clan Rampager|Huntmaster of the Fells|Kessig Wolf Run|Atarka's Command|Firespout|Xenagos, the Reveler|Vengeful Rebirth|Sphinx of the Steel Wind|Warden of the Eye|Roon of the Hidden Realm|Mardu Charm|Siege Rhino|Wild Nacatl|Nicol Bolas, the Ravager|Tasigur, the Golden Fang|Maelstrom Wanderer |Broodmate Dragon|Progenitus";
+
+  // // turn cardlist into array
+  // let cardArray = cardList.split("|");
+  // for (var i = 0; i < cardArray.length; i++) {
+  //   cardArray[i] = cardArray[i].trim();
+  // }
+  // cubeService.createNewCube(cardArray,'Power Jeff');
+}
+})();
+(function() {
+
+angular
+  .module('rotoDraftApp')
+  .controller('PoolsCtrl', PoolsCtrl);
+
+PoolsCtrl.$inject = ['$scope','$firebaseArray','$firebaseObject'];
+
+function PoolsCtrl($scope,$firebaseArray,$firebaseObject) {
+  const db = firebase.database().ref();
+
+  function getAllPlayers() {
+    return getActiveDraftId().then(function(draftId) {
+      return $firebaseArray(db.child('draftProperties').child(draftId).child('players'));
+    });
+  };
+
+  function getActiveDraftId() {
+    let activeDraft = $firebaseArray(firebase.database().ref().child('draftProperties').orderByChild('activeDraft').equalTo(true));
+    return activeDraft.$loaded(function(draft) {
+      return draft[0].$id;
+    });
+  };
+
+  getAllPlayers().then(function(drafters) {
+    $scope.drafters = drafters;
+  });
 };
 })();

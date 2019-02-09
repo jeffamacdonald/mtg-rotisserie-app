@@ -4,23 +4,24 @@ angular
   .module('rotoDraftApp')
   .controller('DraftCtrl', DraftCtrl);
 
-DraftCtrl.$inject = ['$scope','$firebaseArray','$firebaseObject','modalService','activeDraftService'];
+DraftCtrl.$inject = ['$scope','$firebaseArray','$firebaseObject','modalService','activeDraftService','activeDraft'];
 
-function DraftCtrl($scope,$firebaseArray,$firebaseObject,modalService,activeDraftService) {
-	const db = firebase.database().ref();
-  
-  activeDraftService.getActiveCube().then(function(cubeSections) {
-    $scope.displayCube = cubeSections;
-  });
-  activeDraftService.getActivePlayerName().then(function(player) {
-    $scope.activePlayer = player;
-  });
-  activeDraftService.getActivePlayerId().then(function(playerId) {
-    playerId.$watch(function() {
-      activeDraftService.getActivePlayerName().then(function(player) {
-        $scope.activePlayer = player;
-      });
+function DraftCtrl($scope,$firebaseArray,$firebaseObject,modalService,activeDraftService,activeDraft) {
+  let allDrafters = activeDraftService.getAllDrafters(activeDraft);
+  let activePlayerId = activeDraftService.getActivePlayerId(activeDraft);
+
+  // Display current player's name
+  activePlayerId.$watch(function() {
+    angular.forEach(allDrafters,function(value,key) {
+      if(value.$id == activePlayerId.$value) {
+        $scope.activePlayer = value;
+      }
     });
+  });
+
+  // Display Cube
+  activeDraftService.getActiveCube(activeDraft).then(function(cube) {
+    $scope.displayCube = cube;
   });
 
   $scope.selectCard = function(card) {
@@ -31,14 +32,14 @@ function DraftCtrl($scope,$firebaseArray,$firebaseObject,modalService,activeDraf
   $scope.cancelCardSelection = function() {
     modalService.closeModal();
   };
-    
-  $scope.pickCard = function(card) {
-    activeDraftService.pickCard(card);
+
+  $scope.pickCard = function(card,activePlayer) {
+    activeDraftService.pickCard(card,activeDraft,activePlayer.$id);
     modalService.closeModal();
   };
 
-  $scope.undoLastPick = function() {
-    activeDraftService.undoPick();
+  $scope.undoLastPick = function(activePlayer) {
+    activeDraftService.undoPick(activeDraft,activePlayer.$id);
     document.getElementById('undo-dialog').style.display = 'none';
   };
 
