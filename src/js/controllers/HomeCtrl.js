@@ -12,6 +12,7 @@ function HomeCtrl($scope,$firebaseArray,$firebaseObject,activeDraftService,cubeS
 
   let draftProperties = $firebaseArray(db.child('draftProperties'));
   let allDrafters = activeDraftService.getAllDrafters(activeDraft);
+  $scope.playerArray = allDrafters;
 
   let allPlayers = $firebaseArray(db.child('players'));
   allPlayers.$loaded(function(players) {
@@ -112,11 +113,7 @@ function HomeCtrl($scope,$firebaseArray,$firebaseObject,activeDraftService,cubeS
   };
 
   allDrafters.$watch(function() {
-    $scope.draftPicks = activeDraftService.getDraftArray();
-  });
-
-  activeDraftService.getAllPlayers().then(function(players) {
-    $scope.playerArray = players;
+    $scope.draftPicks = activeDraftService.getDraftArray(activeDraft,allDrafters);
   });
 
   function initializePickArray(playerCount, totalRounds) {
