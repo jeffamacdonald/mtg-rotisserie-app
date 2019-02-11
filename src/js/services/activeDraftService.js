@@ -8,24 +8,52 @@ activeDraftService.$inject = ['$firebaseArray','$firebaseObject'];
 
 function activeDraftService($firebaseArray,$firebaseObject) {
   var self = this;
-  const db = firebase.database().ref();
+
+  // cube section vars
+  colorSections = ['W','U','B','R','G'];
+  goldSections = [
+    ['W','U'],
+    ['W','B'],
+    ['W','R'],
+    ['W','G'],
+    ['U','B'],
+    ['U','R'],
+    ['U','G'],
+    ['B','R'],
+    ['B','G'],
+    ['R','G']
+  ]
+
+  // public draft functions
+  this.pickCard = function(card,draft,playerId) {
+    addCardToActivePlayerPool(card,draft,playerId);
+    setCardsIsDraftedStatus(card,draft,true);
+    setNextPlayerActive(draft,playerId,false);
+  };
+
+  this.undoPick = function(draft,playerId) {
+    removeCardFromPreviousPlayerPool(draft);
+    setNextPlayerActive(draft,playerId,true);
+  };
+
+  // public get functions
+  this.getActivePlayerId = function(draft) {
+    return $firebaseObject(draft.$ref().child('activePlayer'));
+  };
+
+  this.getActiveDraftId = function() {
+    return $firebaseArray(firebase.database().ref().child('draftProperties').orderByChild('activeDraft').equalTo(true)).$loaded(function(draft) {
+      return draft[0].$id;
+    });
+  };
+
+  this.getAllDrafters = function(draft) {
+    return $firebaseArray(draft.$ref().child('players'));
+  };
 
   this.getActiveCube = function(draft) {
     return $firebaseArray(draft.$ref().child('draftPool')).$loaded(function(pool) {
       cubeArr = []
-      colorSections = ['W','U','B','R','G'];
-      goldSections = [
-        ['W','U'],
-        ['W','B'],
-        ['W','R'],
-        ['W','G'],
-        ['U','B'],
-        ['U','R'],
-        ['U','G'],
-        ['B','R'],
-        ['B','G'],
-        ['R','G']
-      ]
       colorSections.forEach(function(color) {
         cubeArr.push(getPoolByColor(pool,color));
       });
@@ -39,75 +67,29 @@ function activeDraftService($firebaseArray,$firebaseObject) {
     });
   };
 
-  this.pickCard = function(card,draft,playerId) {
-    addCardToActivePlayerPool(card,draft,playerId);
-    setCardsIsDraftedStatus(card,draft,true);
-    setNextPlayerActive(draft,playerId,false);
-  };
-
-  this.undoPick = function(draft,playerId) {
-    removeCardFromPreviousPlayerPool(draft);
-    setNextPlayerActive(draft,playerId,true);
-  };
-
-  this.getAllDrafters = function(draft) {
-    return $firebaseArray(draft.$ref().child('players'));
-  };
-
-  this.getAllPlayers = function(draft) {
-    return getActiveDraftId().then(function(draftId) {
-      return $firebaseArray(db.child('draftProperties').child(draftId).child('players'));
-    });
-  };
-
-  this.getDraftArray = function() {
+  this.getDraftArray = function(draft,allDrafters) {
     let draftArr = [];
     let roundArr = [];
-    getActiveDraftId().then(function(draftId) {
-      let totalRounds = $firebaseObject(db.child('draftProperties').child(draftId).child('totalRounds'));
-      totalRounds.$loaded(function(rounds) {
-        self.getAllPlayers().then(function(players) {
-          for(var i=0;i<rounds.$value;i++) {
-            players.forEach(function(player) {
-              if(player.cardPool != undefined) {
-                let card = player.cardPool[Object.keys(player.cardPool)[i]];
-                if(card != undefined) {
-                  roundArr.push(card);
-                } else {
-                  roundArr.push({name:''});
-                }
-              } else {
-                roundArr.push({name:''});
-              }
-            });
-            draftArr.push(roundArr);
-            roundArr = [];
+    let totalRounds = $firebaseObject(draft.$ref().child('totalRounds'));
+    totalRounds.$loaded(function(rounds) {
+      for(var i=0;i<rounds.$value;i++) {
+        allDrafters.forEach(function(player) {
+          if(player.cardPool != undefined) {
+            let card = player.cardPool[Object.keys(player.cardPool)[i]];
+            if(card != undefined) {
+              roundArr.push(card);
+            } else {
+              roundArr.push({name:''});
+            }
+          } else {
+            roundArr.push({name:''});
           }
         });
-      });
+        draftArr.push(roundArr);
+        roundArr = [];
+      }
     });
     return draftArr;
-  };
-
-  // get active ids
-  this.getActivePlayerId = function(draft) {
-    return $firebaseObject(draft.$ref().child('activePlayer'));
-  };
-
-  this.getActiveDraftId = function() {
-    return $firebaseArray(firebase.database().ref()
-        .child('draftProperties')
-        .orderByChild('activeDraft')
-        .equalTo(true)).$loaded(function(draft) {
-      return draft[0].$id;
-    });
-  };
-
-  function getActiveDraftId() {
-    let activeDraft = $firebaseArray(firebase.database().ref().child('draftProperties').orderByChild('activeDraft').equalTo(true));
-    return activeDraft.$loaded(function(draft) {
-      return draft[0].$id;
-    });
   };
 
   // Pick card functions
@@ -137,6 +119,98 @@ function activeDraftService($firebaseArray,$firebaseObject) {
         }
       });
     });
+  };
+
+  function getActivePlayerPosition(draft,playerId) {
+    let activePlayerPosition = $firebaseObject(draft.$ref().child('players').child(playerId).child('draftPosition'));
+    return activePlayerPosition.$loaded(function(playerPosition) {
+      return playerPosition.$value;
+    });
+  };
+
+    function setNextPlayerActive(draft,playerId,rollbackBool) {
+    getActivePlayerPosition(draft,playerId).then(function(position) {
+      let players = $firebaseArray(draft.$ref().child('players'));
+      players.$loaded(function(activePlayers) {
+        getSnakeDirection(draft, position, rollbackBool).then(function(direction) {
+          var newPosition = position;
+          switch(direction) {
+            case 'right':
+              newPosition++;
+              break;
+            case 'rollRight':
+              newPosition++;
+              position = position + 2;
+              break;
+            case 'rollToRightEdge':
+              newPosition++;
+              position++;
+              break;
+            case 'rollToPreviousRoundRight':
+              position--;
+              break;
+            case 'left':
+              newPosition--;
+              break;
+            case 'rollLeft':
+              newPosition--;
+              position = position - 2;
+              break;
+            case 'rollToLeftEdge':
+              newPosition--;
+              position--;
+              break;
+            case 'rollToPreviousRoundLeft':
+              position++;
+              break;
+            default:
+              break;
+          }
+          angular.forEach(activePlayers, function(value,key) {
+            if(value.draftPosition == newPosition) {
+              draft.$ref().child('activePlayer').set(value.$id);
+            } 
+            if(value.draftPosition == position) {
+              draft.$ref().child('previousPlayer').set(value.$id);
+            } 
+          });
+        });
+      });
+    });
+  };
+
+  function getSnakeDirection(draft, playerPosition, rollbackBool) {
+    return draft.$loaded(function(draft) {
+      if(draft.currentRound % 2 == 0 && playerPosition > 1 && rollbackBool == false) {
+        return 'left';
+      } else if (draft.currentRound % 2 == 0 && playerPosition < draft.playerCount-1 && rollbackBool) {
+        return 'rollRight';
+      } else if (draft.currentRound % 2 == 0 && playerPosition == draft.playerCount-1 && rollbackBool) {
+        return 'rollToRightEdge';
+      } else if(draft.currentRound % 2 != 0 && playerPosition < draft.playerCount && rollbackBool == false) {
+        return 'right';
+      } else if (draft.currentRound % 2 != 0 && playerPosition > 2 && rollbackBool) {
+        return 'rollLeft';
+      } else if (draft.currentRound % 2 != 0 && playerPosition == 2 && rollbackBool) {
+        return 'rollToLeftEdge';
+      } else if (playerPosition == 1 && rollbackBool) {
+        setPreviousRound(draft);
+        return 'rollToPreviousRoundLeft';
+      } else if(playerPosition == draft.playerCount && rollbackBool) {
+        setPreviousRound(draft);
+        return 'rollToPreviousRoundRight';
+      } else {
+        setNextRound(draft);
+      }
+    });
+  };
+
+  function setNextRound(draft) {
+    draft.$ref().child('currentRound').set(draft.currentRound+1);
+  };
+
+  function setPreviousRound(draft) {
+    draft.$ref().child('currentRound').set(draft.currentRound-1);
   };
 
   // Get individual draft pool sections
@@ -217,98 +291,5 @@ function activeDraftService($firebaseArray,$firebaseObject) {
   function arrayContains(arr,str) {
     return (arr.indexOf(str) > -1);
   };
-
-  function getActivePlayerPosition(draft,playerId) {
-    let activePlayerPosition = $firebaseObject(draft.$ref().child('players').child(playerId).child('draftPosition'));
-    return activePlayerPosition.$loaded(function(playerPosition) {
-      return playerPosition.$value;
-    });
-  };
-
-  function setNextRound(draft) {
-    draft.$ref().child('currentRound').set(draft.currentRound+1);
-  };
-
-  function setPreviousRound(draft) {
-    draft.$ref().child('currentRound').set(draft.currentRound-1);
-  };
-
-  function setNextPlayerActive(draft,playerId,rollbackBool) {
-    getActivePlayerPosition(draft,playerId).then(function(position) {
-      let players = $firebaseArray(draft.$ref().child('players'));
-      players.$loaded(function(activePlayers) {
-        getSnakeDirection(draft, position, rollbackBool).then(function(direction) {
-          var newPosition = position;
-          switch(direction) {
-            case 'right':
-              newPosition++;
-              break;
-            case 'rollRight':
-              newPosition++;
-              position = position + 2;
-              break;
-            case 'rollToRightEdge':
-              newPosition++;
-              position++;
-              break;
-            case 'rollToPreviousRoundRight':
-              position--;
-              break;
-            case 'left':
-              newPosition--;
-              break;
-            case 'rollLeft':
-              newPosition--;
-              position = position - 2;
-              break;
-            case 'rollToLeftEdge':
-              newPosition--;
-              position--;
-              break;
-            case 'rollToPreviousRoundLeft':
-              position++;
-              break;
-            default:
-              break;
-          }
-          angular.forEach(activePlayers, function(value,key) {
-            if(value.draftPosition == newPosition) {
-              draft.$ref().child('activePlayer').set(value.$id);
-            } 
-            if(value.draftPosition == position) {
-              draft.$ref().child('previousPlayer').set(value.$id);
-            } 
-          });
-        });
-      });
-    });
-  };
-
-  function getSnakeDirection(draft, playerPosition, rollbackBool) {
-      return draft.$loaded(function(draft) {
-        if(draft.currentRound % 2 == 0 && playerPosition > 1 && rollbackBool == false) {
-          return 'left';
-        } else if (draft.currentRound % 2 == 0 && playerPosition < draft.playerCount-1 && rollbackBool) {
-          return 'rollRight';
-        } else if (draft.currentRound % 2 == 0 && playerPosition == draft.playerCount-1 && rollbackBool) {
-          return 'rollToRightEdge';
-        } else if(draft.currentRound % 2 != 0 && playerPosition < draft.playerCount && rollbackBool == false) {
-          return 'right';
-        } else if (draft.currentRound % 2 != 0 && playerPosition > 2 && rollbackBool) {
-          return 'rollLeft';
-        } else if (draft.currentRound % 2 != 0 && playerPosition == 2 && rollbackBool) {
-          return 'rollToLeftEdge';
-        } else if (playerPosition == 1 && rollbackBool) {
-          setPreviousRound(draft);
-          return 'rollToPreviousRoundLeft';
-        } else if(playerPosition == draft.playerCount && rollbackBool) {
-          setPreviousRound(draft);
-          return 'rollToPreviousRoundRight';
-        } else {
-          setNextRound(draft);
-        }
-      });
-  };
-
 };
 })();
