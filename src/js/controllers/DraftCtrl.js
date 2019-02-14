@@ -4,9 +4,9 @@ angular
   .module('rotoDraftApp')
   .controller('DraftCtrl', DraftCtrl);
 
-DraftCtrl.$inject = ['$scope','$firebaseArray','$firebaseObject','modalService','activeDraftService','activeDraft'];
+DraftCtrl.$inject = ['$scope','modalService','activeDraftService','activeDraft'];
 
-function DraftCtrl($scope,$firebaseArray,$firebaseObject,modalService,activeDraftService,activeDraft) {
+function DraftCtrl($scope,modalService,activeDraftService,activeDraft) {
   let allDrafters = activeDraftService.getAllDrafters(activeDraft);
   let activePlayerId = activeDraftService.getActivePlayerId(activeDraft);
 
@@ -26,7 +26,7 @@ function DraftCtrl($scope,$firebaseArray,$firebaseObject,modalService,activeDraf
 
   $scope.selectCard = function(card) {
     $scope.card = card;
-    modalService.displayModal(card);
+    modalService.displayModal(card,activeDraft);
   };
 
   $scope.cancelCardSelection = function() {
