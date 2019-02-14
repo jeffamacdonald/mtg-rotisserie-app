@@ -6,8 +6,8 @@ angular
 
 function modalService() {
 
-  this.displayModal = function(cardObj) {
-    if(!cardObj.isDrafted) {
+  this.displayModal = function(cardObj,draft) {
+    if(!(cardObj.isDrafted || Number(draft.currentRound) > Number(draft.totalRounds))) {
       document.getElementById('card-dialog').style.display = 'block';
     }
   };

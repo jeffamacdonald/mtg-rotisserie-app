@@ -4,25 +4,23 @@ angular
   .module('rotoDraftApp')
   .controller('HomeCtrl', HomeCtrl);
 
-HomeCtrl.$inject = ['$scope','$firebaseArray','$firebaseObject','activeDraftService','cubeService','activeDraft'];
+HomeCtrl.$inject = ['$scope','activeDraftService','cubeService','activeDraft','newDraftService'];
 
-function HomeCtrl($scope,$firebaseArray,$firebaseObject,activeDraftService,cubeService,activeDraft) {
-  const db = firebase.database().ref();
+function HomeCtrl($scope,activeDraftService,cubeService,activeDraft,newDraftService) {
   let settingsModal = document.getElementById('draft-settings-dialog');
 
-  let draftProperties = $firebaseArray(db.child('draftProperties'));
   let allDrafters = activeDraftService.getAllDrafters(activeDraft);
   $scope.playerArray = allDrafters;
 
-  let allPlayers = $firebaseArray(db.child('players'));
+  let allPlayers = newDraftService.getAllPlayers();
   allPlayers.$loaded(function(players) {
     players.forEach(function(player) {
-      player.isChecked = true;
+      player.isChecked = false;
     })
     $scope.players = players;
   });
 
-  let allCubes = $firebaseArray(db.child('cubes'));
+  let allCubes = newDraftService.getAllCubes();
   allCubes.$loaded(function(cubes) {
     cubes.forEach(function(cube) {
       cube.isChecked = false;
@@ -41,45 +39,8 @@ function HomeCtrl($scope,$firebaseArray,$firebaseObject,activeDraftService,cubeS
 
   $scope.startNewDraft = function() {
     settingsModal.style.display = 'none';
-    let newDraft = {
-      activeDraft: true,
-      totalRounds: $scope.numberOfRounds,
-      currentRound: 1
-    }
-    draftProperties.$add(newDraft).then(function(ref) {
-      draftProperties.$loaded(function(properties) {
-        let id = ref.key;
-        let newDraftRef = db.child('draftProperties').child(id);
-        angular.forEach(properties, function(value, key) {
-          if(value.$id != id) {
-            db.child('draftProperties').child(value.$id).child('activeDraft').set(false);
-          }
-        });
-        let cube = $scope.cubes.filter(function(cube) {
-          return cube.isChecked == true;
-        });
-        angular.forEach(cube[0].cards, function(value,key) {
-          $firebaseArray(newDraftRef.child('draftPool')).$add(value);
-        })
-
-        let draftPlayers = $scope.players.filter(function(player) {
-          return player.isChecked == true;
-        });
-        newDraftRef.child('playerCount').set(draftPlayers.length);
-        draftPlayers = shuffle(draftPlayers);
-        $scope.pickArray = initializePickArray(draftPlayers.length,$scope.numberOfRounds);
-        angular.forEach(draftPlayers, function(value, key) {
-          delete value.isChecked;
-          value.draftPosition = key+1;
-          $firebaseArray(newDraftRef.child('players')).$add(value).then(function(playerRef) {
-            if(key == 0) {
-              newDraftRef.child('activePlayer').set(playerRef.key);
-            }
-          });
-        });
-      });
-    });
-  };
+    newDraftService.startNewDraft($scope.cubes,$scope.players,$scope.numberOfRounds);
+  }
 
   $scope.textColor = function(card) {
     if(card.colors == undefined && card.types == undefined) {

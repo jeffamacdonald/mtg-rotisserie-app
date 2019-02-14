@@ -37530,9 +37530,9 @@ angular
   .module('rotoDraftApp')
   .controller('DraftCtrl', DraftCtrl);
 
-DraftCtrl.$inject = ['$scope','$firebaseArray','$firebaseObject','modalService','activeDraftService','activeDraft'];
+DraftCtrl.$inject = ['$scope','modalService','activeDraftService','activeDraft'];
 
-function DraftCtrl($scope,$firebaseArray,$firebaseObject,modalService,activeDraftService,activeDraft) {
+function DraftCtrl($scope,modalService,activeDraftService,activeDraft) {
   let allDrafters = activeDraftService.getAllDrafters(activeDraft);
   let activePlayerId = activeDraftService.getActivePlayerId(activeDraft);
 
@@ -37552,7 +37552,7 @@ function DraftCtrl($scope,$firebaseArray,$firebaseObject,modalService,activeDraf
 
   $scope.selectCard = function(card) {
     $scope.card = card;
-    modalService.displayModal(card);
+    modalService.displayModal(card,activeDraft);
   };
 
   $scope.cancelCardSelection = function() {
@@ -37584,25 +37584,23 @@ angular
   .module('rotoDraftApp')
   .controller('HomeCtrl', HomeCtrl);
 
-HomeCtrl.$inject = ['$scope','$firebaseArray','$firebaseObject','activeDraftService','cubeService','activeDraft'];
+HomeCtrl.$inject = ['$scope','activeDraftService','cubeService','activeDraft','newDraftService'];
 
-function HomeCtrl($scope,$firebaseArray,$firebaseObject,activeDraftService,cubeService,activeDraft) {
-  const db = firebase.database().ref();
+function HomeCtrl($scope,activeDraftService,cubeService,activeDraft,newDraftService) {
   let settingsModal = document.getElementById('draft-settings-dialog');
 
-  let draftProperties = $firebaseArray(db.child('draftProperties'));
   let allDrafters = activeDraftService.getAllDrafters(activeDraft);
   $scope.playerArray = allDrafters;
 
-  let allPlayers = $firebaseArray(db.child('players'));
+  let allPlayers = newDraftService.getAllPlayers();
   allPlayers.$loaded(function(players) {
     players.forEach(function(player) {
-      player.isChecked = true;
+      player.isChecked = false;
     })
     $scope.players = players;
   });
 
-  let allCubes = $firebaseArray(db.child('cubes'));
+  let allCubes = newDraftService.getAllCubes();
   allCubes.$loaded(function(cubes) {
     cubes.forEach(function(cube) {
       cube.isChecked = false;
@@ -37621,45 +37619,8 @@ function HomeCtrl($scope,$firebaseArray,$firebaseObject,activeDraftService,cubeS
 
   $scope.startNewDraft = function() {
     settingsModal.style.display = 'none';
-    let newDraft = {
-      activeDraft: true,
-      totalRounds: $scope.numberOfRounds,
-      currentRound: 1
-    }
-    draftProperties.$add(newDraft).then(function(ref) {
-      draftProperties.$loaded(function(properties) {
-        let id = ref.key;
-        let newDraftRef = db.child('draftProperties').child(id);
-        angular.forEach(properties, function(value, key) {
-          if(value.$id != id) {
-            db.child('draftProperties').child(value.$id).child('activeDraft').set(false);
-          }
-        });
-        let cube = $scope.cubes.filter(function(cube) {
-          return cube.isChecked == true;
-        });
-        angular.forEach(cube[0].cards, function(value,key) {
-          $firebaseArray(newDraftRef.child('draftPool')).$add(value);
-        })
-
-        let draftPlayers = $scope.players.filter(function(player) {
-          return player.isChecked == true;
-        });
-        newDraftRef.child('playerCount').set(draftPlayers.length);
-        draftPlayers = shuffle(draftPlayers);
-        $scope.pickArray = initializePickArray(draftPlayers.length,$scope.numberOfRounds);
-        angular.forEach(draftPlayers, function(value, key) {
-          delete value.isChecked;
-          value.draftPosition = key+1;
-          $firebaseArray(newDraftRef.child('players')).$add(value).then(function(playerRef) {
-            if(key == 0) {
-              newDraftRef.child('activePlayer').set(playerRef.key);
-            }
-          });
-        });
-      });
-    });
-  };
+    newDraftService.startNewDraft($scope.cubes,$scope.players,$scope.numberOfRounds);
+  }
 
   $scope.textColor = function(card) {
     if(card.colors == undefined && card.types == undefined) {
@@ -38158,8 +38119,8 @@ angular
 
 function modalService() {
 
-  this.displayModal = function(cardObj) {
-    if(!cardObj.isDrafted) {
+  this.displayModal = function(cardObj,draft) {
+    if(!(cardObj.isDrafted || Number(draft.currentRound) > Number(draft.totalRounds))) {
       document.getElementById('card-dialog').style.display = 'block';
     }
   };
@@ -38168,4 +38129,126 @@ function modalService() {
     document.getElementById('card-dialog').style.display = 'none';
   };
 };
+})();
+(function() {
+
+angular
+  .module('rotoDraftApp')
+  .service('newDraftService', newDraftService);
+
+newDraftService.$inject = ['$firebaseArray','$firebaseObject'];
+
+function newDraftService($firebaseArray,$firebaseObject) {
+  const db = firebase.database().ref();
+  let draftProperties = $firebaseArray(db.child('draftProperties'));
+
+  this.getAllPlayers = function() {
+    return $firebaseArray(db.child('players'));
+  };
+
+  this.getAllCubes = function() {
+    return $firebaseArray(db.child('cubes'));
+  };
+
+  this.startNewDraft = function(cubes,players,rounds) {
+    let newDraftId = addNewDraftToDB();
+    newDraftId.then(function(draftId) {
+      setAllDraftsToInactive(draftId);
+      let newDraft = getDraftById(draftId);
+      let cube = getCube(cubes);
+      let checkedPlayers = getCheckedPlayers(players);
+      addRoundsToNewDraft(rounds,newDraft);
+      addCubeToNewDraft(cube,newDraft);
+      addPlayersToNewDraft(checkedPlayers,newDraft);
+    });
+  };
+
+  function addNewDraftToDB() {
+    let newDraft = {
+      activeDraft: true,
+      currentRound: 1
+    }
+    return draftProperties.$add(newDraft).then(function(ref) {
+      return ref.key;
+    });
+  };
+
+  function getDraftById(draftId) {
+    return $firebaseObject(db.child('draftProperties').child(draftId));
+  };
+
+  function addRoundsToNewDraft(rounds,draft) {
+    draft.$loaded(function(draft) {
+      draft.totalRounds = rounds;
+      draft.$save();
+    })
+    
+  };
+
+  function getActiveDrafts() {
+    return $firebaseArray(firebase.database().ref().child('draftProperties').orderByChild('activeDraft').equalTo(true));
+  };
+
+  function setAllDraftsToInactive(draftIdToSkip) {
+    let activeDrafts = getActiveDrafts();
+    activeDrafts.$loaded(function(drafts) {
+      angular.forEach(drafts,function(value,key) {
+        if(value.$id != draftIdToSkip) {
+          let activeDraftValue = $firebaseObject(draftProperties.$ref().child(value.$id).child('activeDraft'));
+          activeDraftValue.$value = false;
+          activeDraftValue.$save();
+        }
+      });
+    });
+  };
+
+  function getCube(cubes) {
+    return cubes.filter(function(cube) {
+      return cube.isChecked == true;
+    });
+  };
+
+  function addCubeToNewDraft(cube,draft) {
+    draft.$loaded(function(draft) {
+      draft.draftPool = cube[0].cards;
+      draft.$save();
+    });
+  };
+
+  function getCheckedPlayers(players) {
+    let checkedPlayers = players.filter(function(player) {
+      return player.isChecked == true;
+    });
+    return shuffle(checkedPlayers);
+  };
+
+  function addPlayersToNewDraft(players,draft) {
+    draft.$loaded(function(draft) {
+      draft.playerCount = players.length
+      angular.forEach(players, function(value, key) {
+        delete value.isChecked;
+        value.draftPosition = key+1;
+      });
+      draft.players = players;
+      draft.activePlayer = players[0].draftPosition-1;
+      draft.$save();
+    });
+  };
+
+  function shuffle(array) {
+    var currentIndex = array.length, temporaryValue, randomIndex;
+    // While there remain elements to shuffle...
+    while (0 !== currentIndex) {
+      // Pick a remaining element...
+      randomIndex = Math.floor(Math.random() * currentIndex);
+      currentIndex -= 1;
+      // And swap it with the current element.
+      temporaryValue = array[currentIndex];
+      array[currentIndex] = array[randomIndex];
+      array[randomIndex] = temporaryValue;
+    }
+    return array;
+  };
+
+}
 })();
