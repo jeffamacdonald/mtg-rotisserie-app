@@ -37950,7 +37950,7 @@ function activeDraftService($firebaseArray,$firebaseObject) {
         arr.push(card);
       }
     });
-    return sortByCmc(arr);
+    return sortCardSection(arr);
   };
 
   function getGoldPoolByColorPair(pool,colorA,colorB) {
@@ -37961,7 +37961,7 @@ function activeDraftService($firebaseArray,$firebaseObject) {
         arr.push(card);
       }
     });
-    return sortByCmc(arr);
+    return sortCardSection(arr);
   };
 
   function getRemainingGoldPool(pool) {
@@ -37971,7 +37971,7 @@ function activeDraftService($firebaseArray,$firebaseObject) {
         arr.push(card);
       }
     });
-    return sortByCmc(arr);
+    return sortCardSection(arr);
   };
 
   function getColorlessPool(pool) {
@@ -37981,7 +37981,7 @@ function activeDraftService($firebaseArray,$firebaseObject) {
         arr.push(card);
       }
     });
-    return sortByCmc(arr);
+    return sortCardSection(arr);
   };
 
   function getLandPool(pool) {
@@ -37995,10 +37995,20 @@ function activeDraftService($firebaseArray,$firebaseObject) {
   };
 
   // sort functions
-  function sortByCmc(arr) {
+  function sortCardSection(arr) {
     return arr.sort(function(a,b) {
-      return a.cmc - b.cmc;
+      a.typeSort = isCardCreature(a);
+      b.typeSort = isCardCreature(b);
+      return (a.cmc - b.cmc) || (a.typeSort - b.typeSort);
     });
+  };
+
+  function isCardCreature(card) {
+    if(card.types.includes('Creature')) {
+      return 1;
+    } else {
+      return 0;
+    }
   };
 
   function sortByColors(arr) {
