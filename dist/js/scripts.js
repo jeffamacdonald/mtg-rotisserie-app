@@ -37734,8 +37734,6 @@ activeDraftService.$inject = ['$firebaseArray','$firebaseObject','$http'];
 function activeDraftService($firebaseArray,$firebaseObject,$http) {
   var self = this;
 
-  // const SLACK_WEBHOOK_URL = 'https://hooks.slack.com/services/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';
-
   // cube section vars
   colorSections = ['W','U','B','R','G'];
   goldSections = [
@@ -38022,8 +38020,22 @@ function activeDraftService($firebaseArray,$firebaseObject,$http) {
 
   function sortLand(arr) {
     return arr.sort(function(a,b) {
-      return a.multiverseid - b.multiverseid;
+      a.typeSort = whichLand(a);
+      b.typeSort = whichLand(b);
+      let alphaSort = a.name > b.name ? 1 : -1;
+      return (a.typeSort - b.typeSort) || alphaSort;
     });
+  };
+
+  function whichLand(card) {
+    const landText = ['enters the battlefield, you may pay 2 life','{T}, Pay 1 life, Sacrifice','enters the battlefield tapped.\n{T}: Add {','enters the battlefield tapped unless you control two or fewer','enters the battlefield, scry 1','enters the battlefield tapped\nCycling','({T}: Add {']
+    for(var i=0;i<landText.length;i++) {
+      if(card.text.includes(landText[i])) {
+        return i;
+      } else if(i == landText.length-1) {
+        return i+1;
+      }
+    }
   };
 
   function arrayContains(arr,str) {
