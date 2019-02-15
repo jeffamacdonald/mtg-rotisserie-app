@@ -37729,10 +37729,12 @@ angular
   .module('rotoDraftApp')
   .service('activeDraftService', activeDraftService);
 
-activeDraftService.$inject = ['$firebaseArray','$firebaseObject'];
+activeDraftService.$inject = ['$firebaseArray','$firebaseObject','$http'];
 
-function activeDraftService($firebaseArray,$firebaseObject) {
+function activeDraftService($firebaseArray,$firebaseObject,$http) {
   var self = this;
+
+  // const SLACK_WEBHOOK_URL = 'https://hooks.slack.com/services/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';
 
   // cube section vars
   colorSections = ['W','U','B','R','G'];
@@ -37754,6 +37756,7 @@ function activeDraftService($firebaseArray,$firebaseObject) {
     addCardToActivePlayerPool(card,draft,playerId);
     setCardsIsDraftedStatus(card,draft,true);
     setNextPlayerActive(draft,playerId,false);
+    postPickToSlack(draft,card,playerId);
   };
 
   this.undoPick = function(draft,playerId) {
@@ -38015,6 +38018,21 @@ function activeDraftService($firebaseArray,$firebaseObject) {
 
   function arrayContains(arr,str) {
     return (arr.indexOf(str) > -1);
+  };
+
+  // Slack Integration
+  function postPickToSlack(draft,card,playerId) {
+    const slackWebHookUrl = 'https://hooks.slack.com/services/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';
+    let playerName = $firebaseObject(draft.$ref().child('players').child(playerId).child('name'));
+    playerName.$loaded(function(name) {
+      var message = name.$value + " has picked " + card.name;
+      $http({
+        url: slackWebHookUrl,
+        method: "POST",
+        data: 'payload=' + JSON.stringify({"text": message}),
+        headers: {"Content-type": "application/x-www-form-urlencoded; charset=UTF-8"}
+      });
+    });
   };
 };
 })();
