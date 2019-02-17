@@ -50,5 +50,10 @@ function DraftCtrl($scope,modalService,activeDraftService,activeDraft) {
   $scope.undoConfirmation = function() {
     document.getElementById('undo-dialog').style.display = 'block';
   };
+
+  $scope.colorSectionArray = function(index) {
+    let colorArray = ["white","blue","black","red","green","uw","wb","wr","wg","ub","ur","ug","br","bg","rg","gold","colorless","land"];
+    return colorArray[index];
+  };
 };
 })();

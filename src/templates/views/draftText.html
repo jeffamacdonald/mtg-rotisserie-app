@@ -1,7 +1,7 @@
 <div class="topnav">
   <a href="#!/home/">Home</a>
-  <a class="active" href="#!/draft-pool/">Draft Pool</a>
-  <a href="#!/draft-pool-text/">Draft Pool (Text)</a>
+  <a href="#!/draft-pool/">Draft Pool</a>
+  <a class="active" href="#!/draft-pool-text/">Draft Pool (Text)</a>
   <a href="#!/player-pools/">Player Pools</a>
 </div>
 
@@ -12,9 +12,12 @@
 </div>
 
 <div class="draft-pool" ng-repeat="section in displayCube">
+  <div style="width: 100%;">
+    <h2>{{ colorSectionArray($index) | uppercase }}</h2>
+  </div>
   <li ng-repeat="card in section">
-    <div ng-click="selectCard(card)" class="card" ng-class="{ 'drafted' : card.isDrafted }">
-      <img class="hover-enlarge" src="http://gatherer.wizards.com/Handlers/Image.ashx?name={{ card.name }}&amp;set=&amp;type=card">
+    <div ng-click="selectCard(card)" class="card text-card" ng-class="{ 'text-drafted' : card.isDrafted }">
+      <p>{{ card.name }}</p>
     </div>
   </li>
 </div>

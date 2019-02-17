@@ -275,7 +275,8 @@ function activeDraftService($firebaseArray,$firebaseObject,$http) {
     return arr.sort(function(a,b) {
       a.typeSort = isCardCreature(a);
       b.typeSort = isCardCreature(b);
-      return (a.cmc - b.cmc) || (a.typeSort - b.typeSort);
+      let alphaSort = a.name > b.name ? 1 : -1;
+      return (a.cmc - b.cmc) || (a.typeSort - b.typeSort) || alphaSort;
     });
   };
 

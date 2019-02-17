@@ -29,6 +29,17 @@ angular.module('rotoDraftApp', [
         }
 			}
 		})
+    .when('/draft-pool-text/', {
+      templateUrl: 'views/draftText.html',
+      controller: 'DraftCtrl',
+      resolve: {
+        'activeDraft': function($firebaseObject,activeDraftService) {
+          return activeDraftService.getActiveDraftId().then(function(draftId) {
+            return $firebaseObject(firebase.database().ref().child('draftProperties').child(draftId));
+          })
+        }
+      }
+    })
     .when('/player-pools/', {
       templateUrl: 'views/pools.html',
       controller: 'PoolsCtrl'
