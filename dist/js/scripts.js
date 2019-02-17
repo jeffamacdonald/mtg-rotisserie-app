@@ -37517,6 +37517,17 @@ angular.module('rotoDraftApp', [
         }
 			}
 		})
+    .when('/draft-pool-text/', {
+      templateUrl: 'views/draftText.html',
+      controller: 'DraftCtrl',
+      resolve: {
+        'activeDraft': function($firebaseObject,activeDraftService) {
+          return activeDraftService.getActiveDraftId().then(function(draftId) {
+            return $firebaseObject(firebase.database().ref().child('draftProperties').child(draftId));
+          })
+        }
+      }
+    })
     .when('/player-pools/', {
       templateUrl: 'views/pools.html',
       controller: 'PoolsCtrl'
@@ -37575,6 +37586,11 @@ function DraftCtrl($scope,modalService,activeDraftService,activeDraft) {
 
   $scope.undoConfirmation = function() {
     document.getElementById('undo-dialog').style.display = 'block';
+  };
+
+  $scope.colorSectionArray = function(index) {
+    let colorArray = ["white","blue","black","red","green","uw","wb","wr","wg","ub","ur","ug","br","bg","rg","gold","colorless","land"];
+    return colorArray[index];
   };
 };
 })();
@@ -38000,7 +38016,8 @@ function activeDraftService($firebaseArray,$firebaseObject,$http) {
     return arr.sort(function(a,b) {
       a.typeSort = isCardCreature(a);
       b.typeSort = isCardCreature(b);
-      return (a.cmc - b.cmc) || (a.typeSort - b.typeSort);
+      let alphaSort = a.name > b.name ? 1 : -1;
+      return (a.cmc - b.cmc) || (a.typeSort - b.typeSort) || alphaSort;
     });
   };
 
@@ -38044,7 +38061,7 @@ function activeDraftService($firebaseArray,$firebaseObject,$http) {
 
   // Slack Integration
   function postPickToSlack(draft,card,playerId) {
-    const slackWebHookUrl = 'https://hooks.slack.com/services/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';
+    const slackWebHookUrl = ' https://hooks.slack.com/services/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';
     let playerName = $firebaseObject(draft.$ref().child('players').child(playerId).child('name'));
     playerName.$loaded(function(name) {
       var message = name.$value + " has picked " + card.name;
@@ -38058,6 +38075,7 @@ function activeDraftService($firebaseArray,$firebaseObject,$http) {
   };
 };
 })();
+
 (function() {
 
 angular

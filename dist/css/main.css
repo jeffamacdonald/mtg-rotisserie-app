@@ -1,6 +1,6 @@
 .draft-pool {
   border: 2px solid white;
-  min-height: 310px;
+  min-height: 40px;
   margin: 0;
   display: flex;
   flex-direction: row;
@@ -17,6 +17,16 @@
 
 .drafted:hover {
   opacity: 1;
+}
+
+.text-card {
+  border: 1px solid;
+  min-height: 20px;
+  min-width: 40px;
+}
+
+.text-drafted {
+  text-decoration: line-through;
 }
 
 /* styling for background */
