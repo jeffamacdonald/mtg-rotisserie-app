@@ -320,7 +320,7 @@ function activeDraftService($firebaseArray,$firebaseObject,$http) {
 
   // Slack Integration
   function postPickToSlack(draft,card,playerId) {
-    const slackWebHookUrl = ' https://hooks.slack.com/services/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';
+    const slackWebHookUrl = 'https://hooks.slack.com/services/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';
     let playerName = $firebaseObject(draft.$ref().child('players').child(playerId).child('name'));
     playerName.$loaded(function(name) {
       var message = name.$value + " has picked " + card.name;
