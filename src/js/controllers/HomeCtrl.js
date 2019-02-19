@@ -47,7 +47,7 @@ function HomeCtrl($scope,activeDraftService,cubeService,activeDraft,newDraftServ
       return;
     } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.layout == 'transform' && card.colorIdentity[1] == 'W') || 
       (card.colors != undefined && card.colorIdentity[0] == 'W' && card.colorIdentity.length == 1)) {
-      return {background:'white',color:'black'};
+      return {background:'#fafad2'};
     } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.layout == 'transform' && card.colorIdentity[1] == 'U') || 
       (card.colors != undefined && card.colorIdentity[0] == 'U' && card.colorIdentity.length == 1)) {
       return {background:'blue'};
@@ -61,9 +61,9 @@ function HomeCtrl($scope,activeDraftService,cubeService,activeDraft,newDraftServ
       (card.colors != undefined && card.colorIdentity[0] == 'G' && card.colorIdentity.length == 1)) {
       return {background:'green'};
     } else if(card.colors != undefined && card.layout != 'transform' && card.colorIdentity.length > 1) {
-      return {background:'#e6c300',color:'black'};
+      return {background:'#e6c300'};
     } else if(arrayContains(card.types,'Land')) {
-      return {background:'#ffa64d',color:'black'};
+      return {background:'#ffa64d'};
     } else {
       return {background:'grey'};
     }
