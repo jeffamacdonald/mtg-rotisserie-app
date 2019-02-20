@@ -97,7 +97,7 @@ body {
   margin: 0;
   background: #1a2f2a;
   padding: 0 32px 32px 32px;
-  font-family: "magic";
+  font-family: "nevis";
   color: white;
   text-shadow:
    -1px -1px 0 #000,  
@@ -191,4 +191,9 @@ td {
 @font-face {
   font-family: "magic";
   src: url("../fonts/MAGIC.TTF") format("truetype");
+}
+
+@font-face {
+  font-family: "nevis";
+  src: url("../fonts/nevis.ttf") format("truetype");
 }
