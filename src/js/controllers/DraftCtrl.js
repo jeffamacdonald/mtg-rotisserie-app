@@ -24,6 +24,10 @@ function DraftCtrl($scope,modalService,activeDraftService,activeDraft) {
     $scope.displayCube = cube;
   });
 
+  $scope.searchCube = function(searchTerm) {
+    $scope.displayCube = activeDraftService.searchActiveCube(activeDraft,searchTerm);
+  };
+
   $scope.selectCard = function(card) {
     $scope.card = card;
     modalService.displayModal(card,activeDraft);
