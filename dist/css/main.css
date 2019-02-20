@@ -93,6 +93,10 @@
   transform: scale(2.25);
   z-index: 1;
 }
+
+.search-form {
+  margin-bottom: 10px;
+}
 body {
   margin: 0;
   background: #1a2f2a;

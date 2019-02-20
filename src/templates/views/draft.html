@@ -7,6 +7,13 @@
 
 <h1>{{ activePlayer.name | uppercase }}'S PICK</h1>
 
+<div class="search-form">
+  <form novalidate class="simple-form">
+    <label>Search: <input type="text" ng-model="searchTerm" /></label>
+    <input type="submit" ng-click="searchCube(searchTerm)" value="Submit" />
+  </form>
+</div>
+
 <div>
   <button ng-click="undoConfirmation()">Undo Previous Pick</button>
 </div>

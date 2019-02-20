@@ -37561,6 +37561,10 @@ function DraftCtrl($scope,modalService,activeDraftService,activeDraft) {
     $scope.displayCube = cube;
   });
 
+  $scope.searchCube = function(searchTerm) {
+    $scope.displayCube = activeDraftService.searchActiveCube(activeDraft,searchTerm);
+  };
+
   $scope.selectCard = function(card) {
     $scope.card = card;
     modalService.displayModal(card,activeDraft);
@@ -37795,7 +37799,7 @@ function activeDraftService($firebaseArray,$firebaseObject,$http) {
 
   this.getActiveCube = function(draft) {
     return $firebaseArray(draft.$ref().child('draftPool')).$loaded(function(pool) {
-      cubeArr = []
+      cubeArr = [];
       colorSections.forEach(function(color) {
         cubeArr.push(getPoolByColor(pool,color));
       });
@@ -37805,8 +37809,30 @@ function activeDraftService($firebaseArray,$firebaseObject,$http) {
       cubeArr.push(getRemainingGoldPool(pool));
       cubeArr.push(getColorlessPool(pool));
       cubeArr.push(getLandPool(pool));
-      return cubeArr
+      return cubeArr;
     });
+  };
+
+  this.searchActiveCube = function(draft,term) {
+    activeCube = self.getActiveCube(draft);
+    let cubeArr = [];
+    activeCube.then(function(cube) {
+      cube.forEach(function(section) {
+        let sectionArr = [];
+        section.forEach(function(card) {
+          let searchTerm = term.toLowerCase();
+          let text = card.text.toLowerCase();
+          let name = card.name.toLowerCase();
+          if(text.includes(searchTerm)) {
+            sectionArr.push(card);
+          } else if(name.includes(searchTerm)) {
+            sectionArr.push(card);
+          }
+        });
+        cubeArr.push(sectionArr);
+      });
+    });
+    return cubeArr;
   };
 
   this.getDraftArray = function(draft,allDrafters) {
