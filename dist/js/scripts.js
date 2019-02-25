@@ -37647,27 +37647,56 @@ function HomeCtrl($scope,activeDraftService,cubeService,activeDraft,newDraftServ
       return;
     } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.layout == 'transform' && card.colorIdentity[1] == 'W') || 
       (card.colors != undefined && card.colorIdentity[0] == 'W' && card.colorIdentity.length == 1)) {
-      return {background:'#fafad2'};
+      return {'background':'#fafad2','color':'black','text-shadow':'none'};
     } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.layout == 'transform' && card.colorIdentity[1] == 'U') || 
       (card.colors != undefined && card.colorIdentity[0] == 'U' && card.colorIdentity.length == 1)) {
-      return {background:'blue'};
+      return {'background':'blue'};
     } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.layout == 'transform' && card.colorIdentity[1] == 'B') || 
       (card.colors != undefined && card.colorIdentity[0] == 'B' && card.colorIdentity.length == 1)) {
-      return {background:'black'};
+      return {'background':'black','text-shadow':'none'};
     } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.layout == 'transform' && card.colorIdentity[1] == 'R') || 
       (card.colors != undefined && card.colorIdentity[0] == 'R' && card.colorIdentity.length == 1)) {
-      return {background:'#ff0000'};
+      return {'background':'#ff0000'};
     } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.layout == 'transform' && card.colorIdentity[1] == 'G') || 
       (card.colors != undefined && card.colorIdentity[0] == 'G' && card.colorIdentity.length == 1)) {
-      return {background:'green'};
-    } else if(card.colors != undefined && card.layout != 'transform' && card.colorIdentity.length > 1) {
-      return {background:'#e6c300'};
+      return {'background':'green'};
+    } else if(card.colors != undefined && card.layout != 'transform' && card.colorIdentity.length > 2) {
+      return {'background':'#e6c300','color':'black','text-shadow':'none'};
+    } else if(card.colors != undefined && card.layout != 'transform' && card.colorIdentity.length == 2) {
+      let colorArray = getCardColorPair(card);
+      return {'background-image': 'linear-gradient(to right, '+colorArray[2]+', '+colorArray[3]+')'};
     } else if(arrayContains(card.types,'Land')) {
-      return {background:'#ffa64d'};
+      return {'background':'#ffa64d'};
     } else {
-      return {background:'grey'};
+      return {'background':'grey'};
     }
-  }
+  };
+
+  goldSections = [
+    ['W','U','#fafad2','blue'],
+    ['W','B','#fafad2','black'],
+    ['W','R','#fafad2','#ff0000'],
+    ['W','G','#fafad2','green'],
+    ['U','B','blue','black'],
+    ['U','R','blue','#ff0000'],
+    ['U','G','blue','green'],
+    ['B','R','black','#ff0000'],
+    ['B','G','black','green'],
+    ['R','G','#ff0000','green']
+  ]
+
+  function getCardColorPair(card) {
+    let colorPairArray = goldSections.filter(function(section) {
+      return (arrayContains(card.colorIdentity,section[0]) && arrayContains(card.colorIdentity,section[1])) || (card.text != undefined && card.text.includes('Devoid') && card.manaCost.includes(section[0]) && card.manaCost.includes(section[1]));
+    });
+    return colorPairArray[0];
+  };
+  function getGradientByColorPair(card,colorArray) {
+    if(card.colors != undefined && (card.layout == 'normal' || card.layout == 'split') && arrayContains(card.colorIdentity,colorArray[0]) && arrayContains(card.colorIdentity,colorArray[1]) && card.colorIdentity.length == 2 ||
+      (card.text != undefined && card.text.includes('Devoid') && card.manaCost.includes(colorArray[0]) && card.manaCost.includes(colorArray[1]))) {
+      return "{background-image: linear-gradient(to right, "+colorArray[2]+", "+colorArray[3]+")}";
+    }
+  };
 
   function arrayContains(arr,str) {
     return (arr.indexOf(str) > -1);
@@ -37743,6 +37772,123 @@ function PoolsCtrl($scope,$firebaseArray,$firebaseObject) {
   });
 };
 })();
+(function() {
+
+angular.module('rotoDraftApp').
+  directive('stopwatch', function ($timeout) {
+    return {
+      restrict: 'E',
+      transclude: true,
+      scope: {},
+      controller: function($scope, $element, $firebaseObject, activeDraft) {
+        var timeoutId;
+        $scope.seconds = 0;
+        $scope.minutes = 0;
+        
+        timer();
+        
+        function timer() {
+          timeoutId = $timeout(function() {
+            updateTime(); // update Model
+            timer();
+          }, 1000);
+        };
+        
+        function updateTime() {
+          let timestamp = $firebaseObject(activeDraft.$ref().child('pickTimestamp'));
+          timestamp.$loaded(function(time) {
+            let now = Date.parse(new Date());
+            let deltaTime = Math.floor((now - time) / 1000);
+            $scope.seconds = deltaTime % 60;
+            $scope.minutes = Math.floor(deltaTime / 60);
+          });
+        };
+      },
+      template:
+        '<div>' +
+          '<ng-transclude></ng-transclude>' +
+          '<div>{{minutes|numberpad:2}}:{{seconds|numberpad:2}}</div>' +
+        '</div>'
+    };
+  }).
+  filter('numberpad', function() {
+    return function(input, places) {
+      var out = "";
+      if (places) {
+        var placesLength = parseInt(places, 10);
+        var inputLength = input.toString().length;
+      
+        for (var i = 0; i < (placesLength - inputLength); i++) {
+          out = '0' + out;
+        }
+        out = out + input;
+      }
+      return out;
+    };
+  });
+  })();
+(function() {
+
+  function stopwatch($timeout) {
+    return {
+      restrict: 'E',
+      transclude: true,
+      scope: {},
+      controller: StopwatchCtrl,
+      template:
+        '<div>' +
+          '<h2>Timer of Shame</h2>' +
+          '<div>{{minutes|numberpad:2}}:{{seconds|numberpad:2}}</div>' +
+        '</div>',
+      replace: true
+    };
+  };
+
+  function StopwatchCtrl($scope, $element, $firebaseObject, activeDraft) {
+    var timeoutId;
+    $scope.seconds = 0;
+    $scope.minutes = 0;
+    
+    timer();
+    
+    function timer() {
+      timeoutId = $timeout(function() {
+        updateTime(); // update Model
+        timer();
+      }, 1000);
+    };
+    
+    function updateTime() {
+      let timestamp = $firebaseObject(activeDraft.$ref().child('draftTimestamp'));
+      timestamp.$loaded(function(time) {
+        let now = Date.parse(new Date());
+        let deltaTime = Math.floor((now - time) / 1000);
+        $scope.seconds = deltaTime % 60;
+        $scope.minutes = Math.floor(deltaTime / 60);
+      });
+    };
+  };
+
+  function numberpad() {
+    return function(input, places) {
+      var out = "";
+      if (places) {
+        var placesLength = parseInt(places, 10);
+        var inputLength = input.toString().length;
+      
+        for (var i = 0; i < (placesLength - inputLength); i++) {
+          out = '0' + out;
+        }
+        out = out + input;
+      }
+      return out;
+    };
+  };
+
+  angular.module('rotoDraftApp').
+  directive('stopwatch', stopwatch).
+  filter('numberpad', numberpad);
+  })();
 (function() {
 
 angular

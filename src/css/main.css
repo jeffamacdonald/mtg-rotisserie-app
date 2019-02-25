@@ -1,8 +1,8 @@
 body {
   margin: 0;
   background: #1a2f2a;
-  padding: 0 32px 32px 32px;
-  font-family: "nevis";
+  padding: 0 2px 2px 2px;
+  font-family: "roboto";
   color: white;
   text-shadow:
    -1px -1px 0 #000,  
@@ -46,19 +46,19 @@ img {
 table {
   border-collapse: collapse;
   width: 100%;
-  margin-left: 20px;
+  margin-left: 0;
   margin-right: 20px;
 }
 
 td, th {
   border: 1px solid #999;
-  padding: 0.5rem;
+  padding: 0.1rem;
   min-width: 60px;
   text-align: center;
 }
 
 td {
-  font-size: 1.25em;
+  font-size: 1.1em;
 }
 
 /* Add a black background color to the top navigation */
@@ -101,4 +101,9 @@ td {
 @font-face {
   font-family: "nevis";
   src: url("../fonts/nevis.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "roboto";
+  src: url("../fonts/roboto-regular.ttf" format("truetype"));
 }
