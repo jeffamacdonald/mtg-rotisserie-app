@@ -43,57 +43,7 @@ function HomeCtrl($scope,activeDraftService,cubeService,activeDraft,newDraftServ
   }
 
   $scope.textColor = function(card) {
-    if(card.colors == undefined && card.types == undefined) {
-      return;
-    } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.layout == 'transform' && card.colorIdentity[1] == 'W') || 
-      (card.colors != undefined && card.colorIdentity[0] == 'W' && card.colorIdentity.length == 1)) {
-      return {'background':'#fafad2','color':'black','text-shadow':'none'};
-    } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.layout == 'transform' && card.colorIdentity[1] == 'U') || 
-      (card.colors != undefined && card.colorIdentity[0] == 'U' && card.colorIdentity.length == 1)) {
-      return {'background':'blue'};
-    } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.layout == 'transform' && card.colorIdentity[1] == 'B') || 
-      (card.colors != undefined && card.colorIdentity[0] == 'B' && card.colorIdentity.length == 1)) {
-      return {'background':'black','text-shadow':'none'};
-    } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.layout == 'transform' && card.colorIdentity[1] == 'R') || 
-      (card.colors != undefined && card.colorIdentity[0] == 'R' && card.colorIdentity.length == 1)) {
-      return {'background':'#ff0000'};
-    } else if((card.colors != undefined && card.colorIdentity.length == 2 && card.layout == 'transform' && card.colorIdentity[1] == 'G') || 
-      (card.colors != undefined && card.colorIdentity[0] == 'G' && card.colorIdentity.length == 1)) {
-      return {'background':'green'};
-    } else if(card.colors != undefined && card.layout != 'transform' && card.colorIdentity.length > 2) {
-      return {'background':'#e6c300','color':'black','text-shadow':'none'};
-    } else if(card.colors != undefined && card.layout != 'transform' && card.colorIdentity.length == 2) {
-      let colorArray = getCardColorPair(card);
-      return {'background-image': 'linear-gradient(to right, '+colorArray[2]+', '+colorArray[3]+')'};
-    } else if(arrayContains(card.types,'Land')) {
-      return {'background':'#ffa64d'};
-    } else {
-      return {'background':'grey'};
-    }
-  };
-
-  goldSections = [
-    ['W','U','#fafad2','blue'],
-    ['W','B','#fafad2','black'],
-    ['W','R','#fafad2','#ff0000'],
-    ['W','G','#fafad2','green'],
-    ['U','B','blue','black'],
-    ['U','R','blue','#ff0000'],
-    ['U','G','blue','green'],
-    ['B','R','black','#ff0000'],
-    ['B','G','black','green'],
-    ['R','G','#ff0000','green']
-  ]
-
-  function getCardColorPair(card) {
-    let colorPairArray = goldSections.filter(function(section) {
-      return (arrayContains(card.colorIdentity,section[0]) && arrayContains(card.colorIdentity,section[1])) || (card.text != undefined && card.text.includes('Devoid') && card.manaCost.includes(section[0]) && card.manaCost.includes(section[1]));
-    });
-    return colorPairArray[0];
-  };
-
-  function arrayContains(arr,str) {
-    return (arr.indexOf(str) > -1);
+    return activeDraftService.getTextStyle(card);
   };
 
   allDrafters.$watch(function() {

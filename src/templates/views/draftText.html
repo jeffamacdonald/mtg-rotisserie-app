@@ -7,20 +7,22 @@
 
 <h1>{{ activePlayer.name | uppercase }}'S PICK</h1>
 
+<div class="search-form">
+  <form novalidate class="simple-form">
+    <label>Search: <input type="text" ng-model="searchTerm" /></label>
+    <input type="submit" ng-click="searchCube(searchTerm)" value="Submit" />
+  </form>
+</div>
+
 <div>
   <button ng-click="undoConfirmation()">Undo Previous Pick</button>
 </div>
 
-<div class="draft-pool" ng-repeat="section in displayCube">
-  <div style="width: 100%;">
-    <h2>{{ colorSectionArray($index) | uppercase }}</h2>
-  </div>
-  <li ng-repeat="card in section">
-    <div ng-click="selectCard(card)" class="card text-card" ng-class="{ 'text-drafted' : card.isDrafted }">
-      <p>{{ card.name }}</p>
-    </div>
-  </li>
-</div>
+<table>
+  <tr ng-repeat="section in displayCube">
+    <td ng-repeat="card in section" ng-click="selectCard(card)" class="card" ng-class="{ 'text-drafted' : card.isDrafted }" ng-style="textColor(card)">{{ card.name }}</td>
+  </tr>
+</table>
 
 <div id="undo-dialog" class="modal">
   <div class="modal-content">

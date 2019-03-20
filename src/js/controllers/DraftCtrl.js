@@ -59,5 +59,9 @@ function DraftCtrl($scope,modalService,activeDraftService,activeDraft) {
     let colorArray = ["white","blue","black","red","green","uw","wb","wr","wg","ub","ur","ug","br","bg","rg","gold","colorless","land"];
     return colorArray[index];
   };
+
+  $scope.textColor = function(card) {
+    return activeDraftService.getTextStyle(card);
+  };
 };
 })();
