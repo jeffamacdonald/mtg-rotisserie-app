@@ -50,6 +50,10 @@ function HomeCtrl($scope,activeDraftService,cubeService,activeDraft,newDraftServ
     $scope.draftPicks = activeDraftService.getDraftArray(activeDraft,allDrafters);
   });
 
+  $scope.copyPlayersCards = function(player) {
+    activeDraftService.copyPlayersCards(player);
+  };
+
   function initializePickArray(playerCount, totalRounds) {
     var arr = []
     for(var i=0;i<playerCount;i++) {

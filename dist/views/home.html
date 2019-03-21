@@ -13,7 +13,10 @@
 <table>
   <tr>
     <th class="round-count">Rd.</th>
-    <th ng-repeat="player in playerArray">{{ player.name }}</th>
+    <th ng-repeat="player in playerArray">
+      <div>{{ player.name }}</div>
+      <div><button ng-click="copyPlayersCards(player)">Copy Pool</button></div>
+    </th>
   </tr>
   <tr ng-repeat="roundPicks in draftPicks">
     <td class="round-count">{{ $index + 1 }}</td>

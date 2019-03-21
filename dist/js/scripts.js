@@ -37654,6 +37654,10 @@ function HomeCtrl($scope,activeDraftService,cubeService,activeDraft,newDraftServ
     $scope.draftPicks = activeDraftService.getDraftArray(activeDraft,allDrafters);
   });
 
+  $scope.copyPlayersCards = function(player) {
+    activeDraftService.copyPlayersCards(player);
+  };
+
   function initializePickArray(playerCount, totalRounds) {
     var arr = []
     for(var i=0;i<playerCount;i++) {
@@ -37840,6 +37844,11 @@ function activeDraftService($firebaseArray,$firebaseObject,$http) {
       }
     });
     return draftArr;
+  };
+
+  this.copyPlayersCards = function(player) {
+    let cards = getPlayersCardNamesAsString(player);
+    copyToClipboard(cards);
   };
 
   this.getTextStyle = function(card) {
@@ -38135,7 +38144,72 @@ function activeDraftService($firebaseArray,$firebaseObject,$http) {
       });
     });
   };
+
+  // Copy text
+  function copyToClipboard(str) {
+    const el = document.createElement('textarea');  // Create a <textarea> element
+    el.value = str;                                 // Set its value to the string that you want copied
+    el.setAttribute('readonly', '');                // Make it readonly to be tamper-proof
+    el.style.position = 'absolute';                 
+    el.style.left = '-9999px';                      // Move outside the screen to make it invisible
+    document.body.appendChild(el);                  // Append the <textarea> element to the HTML document
+    const selected =            
+      document.getSelection().rangeCount > 0        // Check if there is any content selected previously
+        ? document.getSelection().getRangeAt(0)     // Store selection if found
+        : false;                                    // Mark as false to know no selection existed before
+    el.select();                                    // Select the <textarea> content
+    document.execCommand('copy');                   // Copy - only works as a result of a user action (e.g. click events)
+    document.body.removeChild(el);                  // Remove the <textarea> element
+    if (selected) {                                 // If a selection existed before copying
+      document.getSelection().removeAllRanges();    // Unselect everything on the HTML document
+      document.getSelection().addRange(selected);   // Restore the original selection
+    }
+  };
+
+  function getPlayersCardNamesAsString(player) {
+    let cards = '';
+    angular.forEach(player.cardPool,function(value,key) {
+      cards = cards + value.name + '\n';
+    });
+    return cards;
+  };
 };
+})();
+
+(function() {
+
+angular
+  .module('rotoDraftApp')
+  .factory('authService', authService);
+
+authService.$inject = ['$firebaseAuth'];
+
+function authService($firebaseAuth) {
+    var firebaseAuthObject = $firebaseAuth();
+    var service = {
+       firebaseAuthObject: firebaseAuthObject,
+       register: register,
+       login: login,
+       logout: logout,
+       isLoggedIn: isLoggedIn,
+       sendWelcomeEmail: sendWelcomeEmail
+    };
+    return service;
+    ////////////
+    function register(user) {
+       return firebaseAuthObject.$createUserWithEmailAndPassword(user.email, user.password);
+    }
+    function login(user) {
+       return firebaseAuthObject.$signInWithEmailAndPassword(user.email, user.password);
+    }
+    function logout() {
+       firebaseAuthObject.$signOut();
+    }
+    function isLoggedIn() {
+       return firebaseAuthObject.$getAuth();
+    }
+}
+
 })();
 
 (function() {
